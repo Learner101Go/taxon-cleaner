@@ -1,0 +1,54 @@
+# docker-compose.yml
+services:
+  # Redis for cleaning tool (on port 6380 internally, 6380 on host)
+  cleaning-redis:
+    image: redis:7-alpine
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - cleaning-net
+    restart: unless-stopped
+
+  # NestJS API service
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runner
+    ports:
+      - '3001:3000' # Host 3001 → Container 3000
+    environment:
+      - SYMBIOTA_API=${SYMBIOTA_API} # Moved here from UI service
+      - REDIS_URL=redis://cleaning-redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - cleaning-redis
+    networks:
+      - cleaning-net
+    restart: unless-stopped
+
+  # Angular UI service (served via nginx)
+  ui:
+    build:
+      context: .
+      dockerfile: apps/ui/Dockerfile
+      target: production
+    ports:
+      - '4201:80' # Host 4201 → Container 80
+    environment:
+      # - REDIS_URL=redis://cleaning-redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - api
+    networks:
+      - cleaning-net
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  cleaning-net:
+    driver: bridge
