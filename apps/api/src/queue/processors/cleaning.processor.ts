@@ -41,25 +41,60 @@ export class CleaningProcessor extends WorkerHost {
   //   return chunkResults;
   // }
 
-  async process(job: Job<JobData>): Promise<void> {
-    console.log(
-      `🛠 Processing job ${job.id} with ${job.data.totalChunks} chunks`
-    );
+  // async process(job: Job<JobData>): Promise<void> {
+  //   console.log(
+  //     `🛠 Processing job ${job.id} with ${job.data.totalChunks} chunks`
+  //   );
 
-    const results: CleaningResult[][] = [];
+  //   const results: CleaningResult[][] = [];
 
-    for (const [index, chunk] of job.data.chunks!.entries()) {
-      const chunkResults = await Promise.all(
-        chunk.map((r) => this.processRecord(r, job.data.source))
+  //   for (const [index, chunk] of job.data.chunks!.entries()) {
+  //     const chunkResults = await Promise.all(
+  //       chunk.map((r) => this.processRecord(r, job.data.source))
+  //     );
+
+  //     results[index] = chunkResults;
+  //     await job.updateProgress({
+  //       chunks: results,
+  //       currentChunk: index,
+  //       totalChunks: job.data.totalChunks,
+  //     } as JobProgress);
+  //   }
+  // }
+
+  // async process(job: Job<JobData>) {
+  //   const results = [];
+
+  //   for (const [index, chunk] of job.data.chunks.entries()) {
+  //     const processed = await Promise.all(
+  //       chunk.map((record) => this.processRecord(record, job.data.source))
+  //     );
+  //     await job.updateProgress({ ...job.progress, [index]: processed });
+  //     results[index] = processed;
+  //   }
+
+  //   return results;
+  // }
+
+  async process(job: Job<JobData>) {
+    const results = [];
+    const initialProgress =
+      typeof job.progress === 'object' ? job.progress : {};
+
+    for (const [index, chunk] of job.data.chunks.entries()) {
+      const processed = await Promise.all(
+        chunk.map((record) => this.processRecord(record, job.data.source))
       );
 
-      results[index] = chunkResults;
       await job.updateProgress({
-        chunks: results,
-        currentChunk: index,
-        totalChunks: job.data.totalChunks,
-      } as JobProgress);
+        ...initialProgress,
+        [index]: processed,
+      });
+
+      results[index] = processed;
     }
+
+    return results;
   }
 
   private async processRecord(

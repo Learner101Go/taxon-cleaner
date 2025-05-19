@@ -84,6 +84,17 @@ export interface CleaningResult {
   };
 }
 
+export interface CreateJobResponseDto {
+  jobId: string;
+  totalChunks: number;
+}
+
+export interface JobProgress {
+  chunks: CleaningResult[][];
+  currentChunk: number;
+  totalChunks: number;
+}
+
 // Optional: For strong typing of data sources
 export interface DataSourceConfig {
   name: string;
@@ -102,16 +113,16 @@ export interface CreateJobResponse {
   totalChunks: number;
 }
 
-export interface CreateJobResponseDto {
-  jobId: string; // Single ID now
-  totalChunks: number;
-}
+// export interface CreateJobResponseDto {
+//   jobId: string; // Single ID now
+//   totalChunks: number;
+// }
 
-export interface JobProgress {
-  chunks: (CleaningResult[] | null)[];
-  currentChunk: number;
-  totalChunks: number;
-}
+// export interface JobProgress {
+//   chunks: (CleaningResult[] | null)[];
+//   currentChunk: number;
+//   totalChunks: number;
+// }
 
 export function isAuthorSuggestion(
   suggestion: any

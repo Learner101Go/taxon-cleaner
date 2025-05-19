@@ -41,11 +41,6 @@ export interface JobResponseDto {
   records: TaxonRecord[];
 }
 
-export interface CreateJobResponseDto {
-  jobId: string;
-  totalChunks: number;
-}
-
 // progress tracking interface
 export interface JobProgress {
   chunks: (CleaningResult[] | null)[];
@@ -116,11 +111,27 @@ export interface TaxonResult {
 
 // ----- Combined Cleaning Result -----
 export interface CleaningResult {
-  original: TaxonRecord; // assuming TaxonRecord is defined earlier
+  original: TaxonRecord;
   issues: (AuthorIssue | CoordIssue | TaxonIssue)[];
   suggestions: (AuthorSuggestion | CoordSuggestion | TaxonSuggestion)[];
-  metadata?: Record<string, any>;
+  accepted?: Partial<TaxonRecord>;
+  metadata?: {
+    timestamp?: string;
+    processedBy?: string;
+    autoApplied?: boolean;
+  };
 }
+
+export interface CreateJobResponseDto {
+  jobId: string;
+  totalChunks: number;
+}
+
+// export interface JobProgress {
+//   chunks: CleaningResult[][];
+//   currentChunk: number;
+//   totalChunks: number;
+// }
 
 export function chunkArray<T>(arr: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>

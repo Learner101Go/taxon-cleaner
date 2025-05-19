@@ -1,4 +1,4 @@
-// apps/api/src/jobs/jobs.service.ts
+//
 import {
   BadRequestException,
   Inject,
@@ -35,9 +35,9 @@ export class JobsService {
       processedChunks: 0,
     });
 
-    // Initialize progress structure
+    // Initialize progress structure with empty arrays
     await job.updateProgress({
-      chunks: Array(totalChunks).fill(null),
+      chunks: Array(totalChunks).fill([]),
       currentChunk: 0,
       totalChunks,
     } as JobProgress);
@@ -60,7 +60,8 @@ export class JobsService {
     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
 
     const progress = (await job.progress) as JobProgress;
-    if (!progress?.chunks?.[chunkIndex]) {
+    // Accept empty array as valid
+    if (progress?.chunks?.[chunkIndex] === undefined) {
       throw new NotFoundException(`Chunk ${chunkIndex} not processed yet`);
     }
 

@@ -20,6 +20,7 @@ import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service'
 
       <ng-container *ngIf="currentJobId">
         <app-chunk-processor
+          [jobId]="currentJobId"
           [currentChunkIndex]="currentChunkIndex"
           [totalChunks]="totalChunks"
           [currentChunk]="currentRecords"
@@ -87,6 +88,7 @@ export class CleaningDashboardComponent {
     this.cleaningService
       .startCleaningSession(event.data, this.settings)
       .subscribe(({ jobId, totalChunks }) => {
+        console.log('Job created:', jobId, 'Total chunks:', totalChunks);
         this.currentJobId = jobId;
         this.totalChunks = totalChunks;
         this.loadChunk();
@@ -94,14 +96,12 @@ export class CleaningDashboardComponent {
   }
 
   loadChunk() {
-    this.cleaningService.getChunk(this.currentChunkIndex).subscribe({
-      next: (chunk) => (this.currentRecords = chunk),
-      error: (err) => {
-        console.error('Failed to load chunk:', err);
-        this.router.navigate(['/error'], {
-          state: { error: 'Chunk loading failed' },
-        });
-      },
+    this.cleaningService.getChunk(this.currentChunkIndex).subscribe((chunk) => {
+      console.log('Loaded chunk', this.currentChunkIndex, chunk);
+      this.currentRecords = chunk.map((record) => ({
+        ...record,
+        accepted: record.accepted || { ...record.original },
+      }));
     });
   }
 
@@ -113,6 +113,7 @@ export class CleaningDashboardComponent {
           this.currentChunkIndex++;
           this.loadChunk();
         } else {
+          console.log('Redirecting to /results with jobId:', this.currentJobId);
           this.router.navigate(['/results'], {
             state: { jobId: this.currentJobId },
           });

@@ -15,6 +15,7 @@ import { SettingsPanelComponent } from './components/settings-panel/settings-pan
 import { ResultsReviewComponent } from './components/results-review/results-review.component';
 import { CleaningDashboardComponent } from './pages/cleaning-dashboard/cleaning-dashboard.component';
 import { CleaningRoutingModule } from './cleaning-routing.module';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { CleaningRoutingModule } from './cleaning-routing.module';
     MatButtonModule,
     MatSliderModule,
     CleaningRoutingModule,
+    MatProgressSpinnerModule,
   ],
   exports: [
     DataInputComponent,

@@ -109,6 +109,11 @@ import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service'
           </button>
         </div>
 
+        <div *ngIf="loading" class="loading-overlay">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Processing chunk {{ currentChunkIndex + 1 }}...</p>
+        </div>
+
         <div class="action-footer">
           <button mat-raised-button color="primary" (click)="saveAndContinue()">
             Confirm and Continue
@@ -122,10 +127,13 @@ import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service'
 export class ChunkProcessorComponent {
   @Input() currentChunkIndex!: number;
   @Input() totalChunks!: number;
-  @Input() currentChunk!: CleaningResult[];
+  @Input() currentChunk: CleaningResult[] = [];
+  @Input() jobId!: string;
   @Output() completed = new EventEmitter<CleaningResult[]>();
   @Output() previousChunk = new EventEmitter<void>();
   @Output() nextChunk = new EventEmitter<void>();
+
+  loading = false;
 
   constructor(private cleaning: CleaningService) {}
 
@@ -133,16 +141,31 @@ export class ChunkProcessorComponent {
     this.loadChunk();
   }
 
+  ngOnChanges() {
+    this.loadChunk();
+  }
+
+  // loadChunk() {
+  //   this.cleaning
+  //     .getChunk(this.jobId, this.currentChunkIndex)
+  //     .subscribe((chunk) => {
+  //       this.currentChunk = chunk.map((record) => ({
+  //         ...record,
+  //         accepted: {
+  //           scientificName: record.original.scientificName,
+  //           acceptedNameUsageID: '',
+  //           taxonomicStatus: 'unprocessed',
+  //           ...record.accepted,
+  //         },
+  //       }));
+  //     });
+  // }
+
   loadChunk() {
     this.cleaning.getChunk(this.currentChunkIndex).subscribe((chunk) => {
       this.currentChunk = chunk.map((record) => ({
         ...record,
-        accepted: {
-          scientificName: record.original.scientificName,
-          acceptedNameUsageID: '',
-          taxonomicStatus: 'unprocessed',
-          ...record.accepted,
-        },
+        accepted: record.accepted ?? { ...record.original },
       }));
     });
   }
