@@ -21,20 +21,6 @@ export class QueueService {
     return this.queue.add('cleaning', jobData);
   }
 
-  // constructor(
-  //   @InjectQueue('cleaning') private readonly queue: Queue,
-  //   private config: ConfigService
-  // ) {
-  //   this.queue.on('completed', job => {
-  //     console.log(`Job ${job.id} completed`);
-  //   });
-  // }
-
-  // async getJobProgress(jobId: string) {
-  //   const job = await this.queue.getJob(jobId);
-  //   return job?.progress;
-  // }
-
   async getJobProgress(jobId: string): Promise<JobProgress> {
     const job = await this.queue.getJob(jobId);
     return job.progress as JobProgress;

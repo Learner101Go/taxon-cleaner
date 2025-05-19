@@ -145,22 +145,6 @@ export class ChunkProcessorComponent {
     this.loadChunk();
   }
 
-  // loadChunk() {
-  //   this.cleaning
-  //     .getChunk(this.jobId, this.currentChunkIndex)
-  //     .subscribe((chunk) => {
-  //       this.currentChunk = chunk.map((record) => ({
-  //         ...record,
-  //         accepted: {
-  //           scientificName: record.original.scientificName,
-  //           acceptedNameUsageID: '',
-  //           taxonomicStatus: 'unprocessed',
-  //           ...record.accepted,
-  //         },
-  //       }));
-  //     });
-  // }
-
   loadChunk() {
     this.cleaning.getChunk(this.currentChunkIndex).subscribe((chunk) => {
       this.currentChunk = chunk.map((record) => ({

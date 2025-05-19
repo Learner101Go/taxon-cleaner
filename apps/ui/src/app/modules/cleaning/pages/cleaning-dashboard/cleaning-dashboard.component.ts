@@ -5,7 +5,6 @@ import {
   CleaningResult,
   CleaningSettings,
   DataLoadEvent,
-  TaxonRecord,
 } from 'apps/ui/src/app/core/models/data.models';
 import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service';
 
