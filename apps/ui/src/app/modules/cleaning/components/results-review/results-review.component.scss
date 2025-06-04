@@ -1,0 +1,218 @@
+.results-review {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: Arial, sans-serif;
+  color: #333;
+  position: relative;
+}
+
+// Overlay (loading & error)
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 10;
+
+  p,
+  h3 {
+    margin: 1rem 0 0;
+    color: #555;
+  }
+  .icon-large {
+    font-size: 3rem;
+  }
+}
+
+// CSS Spinner
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 1. Summary Cards
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  .card {
+    display: flex;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    align-items: center;
+    gap: 0.75rem;
+
+    .icon {
+      font-size: 1.5rem;
+    }
+    .text {
+      .value {
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .label {
+        font-size: 0.85rem;
+        color: #666;
+      }
+    }
+  }
+
+  .issues .icon {
+    color: #ff9800;
+  }
+  .corrections .icon {
+    color: #4caf50;
+  }
+  .chunks .icon {
+    color: #9c27b0;
+  }
+}
+
+// 2. Chunk Navigator
+.navigator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .nav-btn {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    &:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  }
+  .nav-info {
+    font-size: 0.9rem;
+  }
+}
+
+// 3. Records List
+.records {
+  .records-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+
+    h4 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    small {
+      font-size: 0.8rem;
+      color: #666;
+    }
+  }
+
+  .records-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+
+  .record {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+    gap: 1rem;
+    transition: background 0.1s;
+    &:hover {
+      background: #fafafa;
+    }
+
+    &.has-issues {
+      border-left: 4px solid #ff9800;
+    }
+    &.has-corrections {
+      border-right: 4px solid #4caf50;
+    }
+
+    .side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      .title {
+        font-size: 0.75rem;
+        color: #888;
+        margin-bottom: 0.25rem;
+      }
+      .line {
+        font-size: 0 eight-rem;
+      }
+      .sub {
+        font-size: 0 seven-rem;
+        color: #666;
+        font-style: italic;
+      }
+    }
+
+    .details {
+      flex: 2;
+      .title {
+        font-size: 0.75rem;
+        color: #888;
+        margin-bottom: 0.25rem;
+      }
+      .line {
+        font-size: 0.85rem;
+        color: #555;
+      }
+    }
+  }
+}
+
+// 4. Actions
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+
+  .btn {
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0 nine-rem;
+  }
+  .primary {
+    background: #1976d2;
+    color: #fff;
+  }
+  .secondary {
+    background: #4caf50;
+    color: #fff;
+  }
+}

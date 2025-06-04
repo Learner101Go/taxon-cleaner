@@ -17,6 +17,7 @@
     "paths": {
       "@taxon-cleaner/api-auth": ["libs/api-auth/src/index.ts"],
       "@taxon-cleaner/api-common": ["libs/api-common/src/index.ts"],
+      "@taxon-cleaner/api-database": ["libs/api-database/src/index.ts"],
       "@taxon-cleaner/shared": ["libs/shared/src/index.ts"],
       "@taxon-cleaner/ui-common": ["libs/ui-common/src/index.ts"]
     }

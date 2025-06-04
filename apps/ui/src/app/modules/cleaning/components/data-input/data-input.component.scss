@@ -1,0 +1,84 @@
+.data-input-container {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+
+  > aside,
+  > section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 16px;
+    flex: 1 1 300px;
+    min-width: 280px;
+  }
+
+  .upload-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    button {
+      align-self: flex-start;
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .file-name {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #555;
+      word-break: break-all;
+    }
+  }
+
+  .text-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 0.95rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .process-btn {
+      align-self: flex-end;
+      padding: 8px 18px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .error-list {
+      margin: 8px 0 0;
+      padding-left: 20px;
+      color: #b00020;
+      font-size: 0.9rem;
+      li {
+        margin-bottom: 4px;
+      }
+    }
+  }
+}
+
+/* Stack panes on very narrow viewports */
+@media (max-width: 600px) {
+  .data-input-container {
+    flex-direction: column;
+  }
+}

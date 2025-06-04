@@ -1,0 +1,75 @@
+<div class="settings-panel">
+  <h2 class="panel-title">Cleaning Settings</h2>
+
+  <!-- Top row: Cleaning Rules + Data Sources -->
+  <div class="top-sections">
+    <!-- Cleaning Rules -->
+    <section class="section-card">
+      <h3>Cleaning Rules</h3>
+      <label class="option">
+        <input
+          type="checkbox"
+          [(ngModel)]="settings.autoCorrectAuthors"
+          (ngModelChange)="onUserChange()"
+        />
+        Auto-correct Author Names
+      </label>
+      <label class="option">
+        <input
+          type="checkbox"
+          [(ngModel)]="settings.validateCoordinates"
+          (ngModelChange)="onUserChange()"
+        />
+        Validate Coordinates
+      </label>
+      <label class="option">
+        <input
+          type="checkbox"
+          [(ngModel)]="settings.resolveTaxonomy"
+          (ngModelChange)="onUserChange()"
+        />
+        Resolve Taxonomy
+      </label>
+    </section>
+
+    <!-- Data Sources -->
+    <section class="section-card">
+      <h3>Data Sources</h3>
+      <label class="option" *ngFor="let source of availableSources">
+        <input
+          type="checkbox"
+          [(ngModel)]="source.enabled"
+          (ngModelChange)="onUserChange()"
+        />
+        {{ source.name }}
+      </label>
+    </section>
+  </div>
+
+  <!-- Advanced Settings (full width) -->
+  <section class="section-card advanced">
+    <h3>Advanced</h3>
+    <div class="grid-form">
+      <div class="form-field">
+        <label>Chunk Size</label>
+        <input
+          type="number"
+          [(ngModel)]="settings.chunkSize"
+          (ngModelChange)="onUserChange()"
+          min="1"
+        />
+      </div>
+      <div class="form-field">
+        <label>Confidence Threshold</label>
+        <input
+          type="number"
+          [(ngModel)]="settings.confidenceThreshold"
+          (ngModelChange)="onUserChange()"
+          min="0"
+          max="1"
+          step="0.01"
+        />
+      </div>
+    </div>
+  </section>
+</div>

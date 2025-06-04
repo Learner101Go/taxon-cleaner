@@ -13,14 +13,23 @@ export interface TaxonRecord {
   recordedBy?: string;
   occurrenceID?: string;
   eventDate?: string;
+  [key: string]: any; // Allow for dynamic fields
 }
 
 export interface JobData {
+  jobGroupId?: string;
   records: TaxonRecord[];
   chunks?: TaxonRecord[][];
   source: string;
   chunkSize: number;
+  chunkIndex?: number;
+  confidenceThreshold?: number;
+  autoCorrectAuthors?: boolean;
+  validateCoordinates?: boolean;
+  resolveTaxonomy?: boolean;
   processedChunks?: any;
+  parentJobId?: string;
+  isParent?: boolean;
   totalChunks?: number;
   timestamp?: string;
 }
@@ -41,60 +50,73 @@ export interface JobResponseDto {
   records: TaxonRecord[];
 }
 
-// progress tracking interface
 export interface JobProgress {
-  chunks: (CleaningResult[] | null)[];
+  chunks: Array<CleaningResult[] | null>;
   currentChunk: number;
   totalChunks: number;
 }
 
-export interface CoordinateIssue {
-  type: string;
-  message: string;
-  field: 'latitude' | 'longitude';
-}
-
 // ----- Issue Types -----
-export interface AuthorIssue {
+export interface Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
+  field?: string;
 }
 
-export interface CoordIssue {
+export interface AuthorIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
 }
 
-export interface TaxonIssue {
+export interface CoordIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
+  field?: 'latitude' | 'longitude';
+}
+
+export type JobStatus =
+  | 'completed'
+  | 'delayed'
+  | 'failed'
+  | 'wait'
+  | 'prioritized'
+  | 'paused'
+  | 'active';
+
+export interface TaxonIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
+  message: string;
 }
 
 // ----- Suggestion Types -----
 export interface AuthorSuggestion {
-  type: 'author-normalization';
+  type: 'author';
   confidence: number; // 0.0–1.0
-  value: string; // e.g. "M.E. Barkworth"
+  correctedAuthor: string; // e.g. "M.E. Barkworth"
+  source?: 'ipni' | 'pterido';
 }
 
 export interface CoordSuggestion {
-  type: 'coordinate-correction' | 'coordinate-precision';
+  type: 'coordinate';
   confidence: number;
-  value: Partial<{ decimalLatitude: number; decimalLongitude: number }>;
+  suggestedLat: number;
+  suggestedLng: number;
 }
 
 export interface TaxonSuggestion {
-  type: 'taxon-resolution';
+  type: 'taxon';
   confidence: number;
-  value: Partial<{
-    scientificName: string;
-    taxonRank: string;
-    acceptedNameUsageID: string;
-  }>;
+  scientificName: string;
+  acceptedName?: string;
+  family?: string;
+  genus?: string;
+  taxonRank?: string;
+  acceptedNameUsageID?: string;
 }
 
 // ----- Module Result Wrappers -----
 export interface AuthorResult {
+  original?: string;
   issues: AuthorIssue[];
   suggestions: AuthorSuggestion[];
 }
@@ -112,9 +134,9 @@ export interface TaxonResult {
 // ----- Combined Cleaning Result -----
 export interface CleaningResult {
   original: TaxonRecord;
-  issues: (AuthorIssue | CoordIssue | TaxonIssue)[];
+  issues: Issue[];
   suggestions: (AuthorSuggestion | CoordSuggestion | TaxonSuggestion)[];
-  accepted?: Partial<TaxonRecord>;
+  accepted?: TaxonRecord; // Full TaxonRecord, not Partial
   metadata?: {
     timestamp?: string;
     processedBy?: string;
@@ -123,15 +145,9 @@ export interface CleaningResult {
 }
 
 export interface CreateJobResponseDto {
-  jobId: string;
+  jobIds: string[];
   totalChunks: number;
 }
-
-// export interface JobProgress {
-//   chunks: CleaningResult[][];
-//   currentChunk: number;
-//   totalChunks: number;
-// }
 
 export function chunkArray<T>(arr: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>

@@ -7,9 +7,14 @@ import { AuthorService } from './author/author.service';
 import { CoordinateService } from './coordinate/coordinate.service';
 import { TaxonService } from './taxon/taxon.service';
 import { ProcessingService } from './taxon/processing.service';
+import {
+  DatabaseModule,
+  IpniAuthor,
+  PteridoAuthor,
+} from '@taxon-cleaner/api-database';
 
 @Module({
-  imports: [ConfigModule, HttpModule, CacheModule.register()],
+  imports: [ConfigModule, HttpModule, CacheModule.register(), DatabaseModule],
   providers: [
     AuthorService,
     CoordinateService,

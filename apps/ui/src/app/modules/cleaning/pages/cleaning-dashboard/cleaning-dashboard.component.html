@@ -1,0 +1,79 @@
+<div class="dashboard">
+  <!-- ——— Header Bar ——— -->
+  <header class="dashboard__header">
+    <div class="header__title">
+      <h1>Taxon Cleaner</h1>
+    </div>
+    <button class="btn btn--danger" (click)="startNewSession()">
+      New Session
+    </button>
+  </header>
+
+  <!-- ——— Initial / Reset View ——— -->
+  <section
+    class="dashboard__setup"
+    *ngIf="!jobIds.length && !allChunksCompleted"
+  >
+    <aside class="setup__sidebar">
+      <app-settings-panel
+        [settings]="settings"
+        (settingsChanged)="onSettings($event)"
+      ></app-settings-panel>
+    </aside>
+    <main class="setup__main">
+      <h2>Load Your Data</h2>
+      <app-data-input (dataLoaded)="startCleaning($event)"></app-data-input>
+    </main>
+  </section>
+
+  <!-- ——— Chunk Review View ——— -->
+  <section
+    class="dashboard__review"
+    *ngIf="jobIds.length && !allChunksCompleted"
+  >
+    <main class="review__main">
+      <app-chunk-processor
+        [jobId]="currentJobId"
+        [currentChunkIndex]="currentChunkIndex"
+        [totalChunks]="totalChunks"
+        [currentChunk]="currentRecords"
+        (completed)="onChunkComplete($event)"
+        (previousChunk)="onPreviousChunk()"
+        (nextChunk)="onNextChunk()"
+      ></app-chunk-processor>
+    </main>
+
+    <footer class="review__footer">
+      <div class="progress">
+        <div class="progress__bar">
+          <div
+            class="progress__fill"
+            [style.width.%]="(processedChunks / totalChunks) * 100"
+          ></div>
+        </div>
+        <div class="progress__info">
+          {{ processedChunks }} / {{ totalChunks }} chunks (Current:
+          {{ currentChunkIndex + 1 }})
+        </div>
+      </div>
+    </footer>
+  </section>
+
+  <!-- ——— Completion Screen ——— -->
+  <section class="dashboard__done" *ngIf="allChunksCompleted">
+    <div class="done__card">
+      <div class="done__icon">✔️</div>
+      <h2>All chunks processed!</h2>
+      <p>Preparing your results…</p>
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+  </section>
+
+  <!-- ——— Fullscreen Loading Overlay ——— -->
+  <div class="overlay" *ngIf="isLoadingChunk && !currentRecords.length">
+    <div class="overlay__box">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Loading chunk data…</p>
+    </div>
+  </div>
+</div>

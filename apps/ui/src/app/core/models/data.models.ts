@@ -17,7 +17,13 @@ export interface CleaningSettings {
 }
 
 export interface TaxonRecord {
-  scientificName: string;
+  id?: number;
+  authorName: string;
+  authorForename?: string;
+  authorSurname?: string;
+  standardForm?: string;
+  source?: 'ipni' | 'pterido';
+  scientificName?: string;
   scientificNameAuthorship?: string;
   taxonRank?: string;
   decimalLatitude?: number;
@@ -30,53 +36,61 @@ export interface TaxonRecord {
   recordedBy?: string;
   occurrenceID?: string;
   eventDate?: string;
-  // Additional Darwin Core fields as needed
+  [key: string]: any;
 }
 
-// ----- Issue Types -----
-export interface AuthorIssue {
+export interface Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
+  field?: string;
 }
 
-export interface CoordIssue {
+export interface AuthorIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
 }
 
-export interface TaxonIssue {
+export interface CoordIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
   message: string;
-  severity: 'error' | 'warning' | 'info';
+  field?: 'latitude' | 'longitude';
+}
+
+export interface TaxonIssue extends Issue {
+  type: 'error' | 'warning' | 'info';
+  message: string;
 }
 
 // ----- Suggestion Types -----
 export interface AuthorSuggestion {
-  type: 'author-normalization';
+  type: 'author';
   confidence: number; // 0.0–1.0
-  value: string; // e.g. "M.E. Barkworth"
+  correctedAuthor: string; // e.g. "M.E. Barkworth"
 }
 
 export interface CoordSuggestion {
-  type: 'coordinate-correction' | 'coordinate-precision';
+  type: 'coordinate';
   confidence: number;
-  value: Partial<{ decimalLatitude: number; decimalLongitude: number }>;
+  suggestedLat: number;
+  suggestedLng: number;
 }
 
 export interface TaxonSuggestion {
-  type: 'taxon-resolution';
+  type: 'taxon';
   confidence: number;
-  value: Partial<{
-    scientificName: string;
-    taxonRank: string;
-    acceptedNameUsageID: string;
-  }>;
+  scientificName: string;
+  acceptedName?: string;
+  family?: string;
+  genus?: string;
+  taxonRank?: string;
+  acceptedNameUsageID?: string;
 }
 
 export interface CleaningResult {
   original: TaxonRecord;
-  issues: (AuthorIssue | CoordIssue | TaxonIssue)[];
+  issues: Issue[];
   suggestions: (AuthorSuggestion | CoordSuggestion | TaxonSuggestion)[];
-  accepted?: Partial<TaxonRecord>;
+  accepted: TaxonRecord;
   metadata?: {
     timestamp?: string;
     processedBy?: string;
@@ -85,14 +99,19 @@ export interface CleaningResult {
 }
 
 export interface CreateJobResponseDto {
-  jobId: string;
+  jobIds: string[];
   totalChunks: number;
+  totalRecords?: number;
 }
 
 export interface JobProgress {
-  chunks: CleaningResult[][];
+  status: string;
+  jobId: string;
+  chunks: (CleaningResult[] | null)[];
   currentChunk: number;
   totalChunks: number;
+  processedRecords?: any;
+  totalRecords?: number;
 }
 
 // Optional: For strong typing of data sources
@@ -107,39 +126,30 @@ export interface DataLoadEvent {
   source: 'file-upload' | 'text-input';
 }
 
-// The server’s response to POST /jobs
+export interface TaxonLoadEvent {
+  data: TaxonRecord[];
+  source: 'file-upload' | 'text-input';
+}
+
 export interface CreateJobResponse {
   jobIds: string[];
   totalChunks: number;
 }
 
-// export interface CreateJobResponseDto {
-//   jobId: string; // Single ID now
-//   totalChunks: number;
-// }
-
-// export interface JobProgress {
-//   chunks: (CleaningResult[] | null)[];
-//   currentChunk: number;
-//   totalChunks: number;
-// }
-
 export function isAuthorSuggestion(
   suggestion: any
 ): suggestion is AuthorSuggestion {
-  return suggestion.type === 'author-normalization';
+  return suggestion.type === 'author';
 }
 
 export function isCoordSuggestion(
   suggestion: any
 ): suggestion is CoordSuggestion {
-  return ['coordinate-correction', 'coordinate-precision'].includes(
-    suggestion.type
-  );
+  return suggestion.type === 'coordinate';
 }
 
 export function isTaxonSuggestion(
   suggestion: any
 ): suggestion is TaxonSuggestion {
-  return suggestion.type === 'taxon-resolution';
+  return suggestion.type === 'taxon';
 }

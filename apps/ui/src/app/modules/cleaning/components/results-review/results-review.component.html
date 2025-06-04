@@ -1,0 +1,127 @@
+<div class="results-review">
+  <!-- Loading Overlay -->
+  <div *ngIf="loading" class="overlay">
+    <div class="spinner"></div>
+    <p>Loading results…</p>
+  </div>
+
+  <!-- Main Content -->
+  <ng-container *ngIf="!loading && progress">
+    <!-- 1. Summary Cards -->
+    <section class="summary-cards">
+      <div class="card">
+        <div class="icon">📋</div>
+        <div class="text">
+          <div class="value">{{ totalRecords }}</div>
+          <div class="label">Total Records</div>
+        </div>
+      </div>
+      <div class="card issues">
+        <div class="icon">⚠️</div>
+        <div class="text">
+          <div class="value">{{ totalIssues }}</div>
+          <div class="label">Issues Found</div>
+        </div>
+      </div>
+      <div class="card corrections">
+        <div class="icon">🛠️</div>
+        <div class="text">
+          <div class="value">{{ autoCorrected }}</div>
+          <div class="label">Auto-Corrected</div>
+        </div>
+      </div>
+      <div class="card chunks">
+        <div class="icon">📦</div>
+        <div class="text">
+          <div class="value">{{ totalChunks }}</div>
+          <div class="label">Chunks Processed</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Chunk Navigator -->
+    <section class="navigator">
+      <button
+        class="nav-btn"
+        (click)="previousChunk()"
+        [disabled]="currentChunkIndex === 0"
+      >
+        ‹
+      </button>
+      <span class="nav-info"
+        >Chunk {{ currentChunkIndex + 1 }} of {{ totalChunks }}</span
+      >
+      <button
+        class="nav-btn"
+        (click)="nextChunk()"
+        [disabled]="currentChunkIndex === totalChunks - 1"
+      >
+        ›
+      </button>
+    </section>
+
+    <!-- 3. Records List -->
+    <section class="records">
+      <header class="records-header">
+        <h4>
+          Chunk {{ currentChunkIndex + 1 }} Records ({{ currentChunk.length }})
+        </h4>
+        <small>
+          {{ getChunkIssues() }} issue{{ getChunkIssues() !== 1 ? 's' : '' }},
+          {{ getChunkCorrections() }} corrected
+        </small>
+      </header>
+
+      <div class="records-container">
+        <div
+          *ngFor="let rec of currentChunk; let i = index"
+          class="record"
+          [class.has-issues]="rec.issues.length"
+          [class.has-corrections]="hasCorrections(rec)"
+        >
+          <div class="side">
+            <div class="title">Orig</div>
+            <div class="line">
+              <strong>{{ rec.original.scientificName }}</strong>
+            </div>
+            <div *ngIf="rec.original.scientificNameAuthorship" class="sub">
+              {{ rec.original.scientificNameAuthorship }}
+            </div>
+          </div>
+
+          <div class="side">
+            <div class="title">Cleaned</div>
+            <div class="line">
+              <strong>{{
+                rec.accepted.scientificName || rec.original.scientificName
+              }}</strong>
+            </div>
+            <div *ngIf="rec.accepted.scientificNameAuthorship" class="sub">
+              {{ rec.accepted.scientificNameAuthorship }}
+            </div>
+          </div>
+
+          <div class="details" *ngIf="rec.issues.length">
+            <div class="title">Issues</div>
+            <div class="line">{{ getIssueMessages(rec.issues) }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Final Actions -->
+    <footer class="actions">
+      <button class="btn primary" (click)="downloadResults()">Download</button>
+      <button class="btn secondary" (click)="saveResults()">Save</button>
+      <button class="btn" (click)="startNewSession()">New Session</button>
+    </footer>
+  </ng-container>
+
+  <!-- Error State -->
+  <div *ngIf="!loading && !progress" class="overlay">
+    <div class="icon-large">❌</div>
+    <h3>Unable to load results</h3>
+    <button class="btn primary" (click)="retryLoad()">Retry</button>
+    <button class="btn" (click)="startNewSession()">Back to Dashboard</button>
+  </div>
+</div>

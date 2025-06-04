@@ -1,236 +1,158 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import {
-  AuthorSuggestion,
-  CleaningChunk,
   CleaningResult,
-  CoordSuggestion,
-  isTaxonSuggestion,
   TaxonRecord,
-  TaxonSuggestion,
 } from 'apps/ui/src/app/core/models/data.models';
 import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service';
 
 @Component({
   selector: 'app-chunk-processor',
-  template: `
-    <div class="chunk-container">
-      <div class="navigation-header">
-        <button
-          mat-button
-          (click)="previousChunk.emit()"
-          [disabled]="currentChunkIndex === 0"
-        >
-          <mat-icon>chevron_left</mat-icon> Previous
-        </button>
-        <span class="chunk-counter"
-          >Chunk {{ currentChunkIndex + 1 }} of {{ totalChunks }}</span
-        >
-        <button
-          mat-button
-          (click)="nextChunk.emit()"
-          [disabled]="currentChunkIndex === totalChunks - 1"
-        >
-          Next <mat-icon>chevron_right</mat-icon>
-        </button>
-      </div>
-
-      <div *ngIf="currentChunk" class="records-container">
-        <div class="record-card" *ngFor="let record of currentChunk">
-          <h3>{{ record.original.scientificName }}</h3>
-
-          <div class="issues-section">
-            <div *ngFor="let issue of record.issues" class="issue-badge">
-              {{ issue.message }}
-            </div>
-          </div>
-          <!--
-          <div class="suggestions-box">
-            <button
-              mat-raised-button
-              *ngFor="let suggestion of record.suggestions"
-              (click)="applySuggestion(record, suggestion)"
-            >
-              {{ suggestion.value | truncate : 25 }}
-            </button>
-          </div>
-
-          <div class="correction-editor">
-            <mat-form-field>
-              <textarea
-                matInput
-                [(ngModel)]="record.accepted.scientificName"
-                placeholder="Scientific Name"
-              ></textarea>
-            </mat-form-field>
-            <mat-form-field>
-              <input
-                type="number"
-                matInput
-                [(ngModel)]="record.accepted.decimalLatitude"
-                placeholder="Latitude"
-              />
-            </mat-form-field>
-            <mat-form-field>
-              <input
-                type="number"
-                matInput
-                [(ngModel)]="record.accepted.decimalLongitude"
-                placeholder="Longitude"
-              />
-            </mat-form-field>
-          </div> -->
-
-          <div class="suggestions-box">
-            <button
-              mat-raised-button
-              *ngFor="let suggestion of record.suggestions"
-              (click)="applySuggestion(record, suggestion)"
-            >
-              {{ suggestion.value }}
-            </button>
-          </div>
-
-          <div class="correction-editor">
-            <mat-form-field>
-              <textarea
-                matInput
-                [(ngModel)]="record.accepted.scientificName"
-                placeholder="Accepted Scientific Name"
-              ></textarea>
-            </mat-form-field>
-          </div>
-
-          <button
-            mat-raised-button
-            *ngFor="let suggestion of record.suggestions"
-            (click)="applySuggestion(record, suggestion)"
-          >
-            {{ getSuggestionDisplay(suggestion) }}
-          </button>
-        </div>
-
-        <div *ngIf="loading" class="loading-overlay">
-          <mat-spinner diameter="50"></mat-spinner>
-          <p>Processing chunk {{ currentChunkIndex + 1 }}...</p>
-        </div>
-
-        <div class="action-footer">
-          <button mat-raised-button color="primary" (click)="saveAndContinue()">
-            Confirm and Continue
-          </button>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: 'chunk-processor.component.html',
+  styleUrls: ['chunk-processor.component.scss'],
   standalone: false,
 })
 export class ChunkProcessorComponent {
+  @Input() jobId!: string;
   @Input() currentChunkIndex!: number;
   @Input() totalChunks!: number;
   @Input() currentChunk: CleaningResult[] = [];
-  @Input() jobId!: string;
+
   @Output() completed = new EventEmitter<CleaningResult[]>();
   @Output() previousChunk = new EventEmitter<void>();
   @Output() nextChunk = new EventEmitter<void>();
 
-  loading = false;
-
-  constructor(private cleaning: CleaningService) {}
-
-  ngOnInit() {
-    this.loadChunk();
+  // Make a local copy to avoid modifying the input directly
+  get currentRecords(): CleaningResult[] {
+    return this.currentChunk.map(
+      (record) =>
+        ({
+          ...record,
+          accepted: record.accepted || { ...record.original },
+        } as CleaningResult)
+    );
   }
 
-  ngOnChanges() {
-    this.loadChunk();
+  constructor(private cleaningService: CleaningService) {}
+
+  onRecordChange(index: number) {
+    // This method is called when user edits a field
+    // The two-way binding will automatically update the record
+    console.log(`Record ${index} changed`);
   }
 
-  loadChunk() {
-    this.cleaning.getChunk(this.currentChunkIndex).subscribe((chunk) => {
-      this.currentChunk = chunk.map((record) => ({
-        ...record,
-        accepted: record.accepted ?? { ...record.original },
-      }));
+  getTotalIssues(): number {
+    return this.currentRecords.reduce(
+      (total, record) => total + (record.issues?.length || 0),
+      0
+    );
+  }
+
+  getTotalSuggestions(): number {
+    return this.currentRecords.reduce(
+      (total, record) => total + (record.suggestions?.length || 0),
+      0
+    );
+  }
+
+  getIssueIcon(type: string): string {
+    switch (type) {
+      case 'error':
+        return 'error';
+      case 'warning':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  }
+
+  getSuggestionType(suggestion: any): string {
+    switch (suggestion.type) {
+      case 'taxon':
+        return 'Taxon';
+      case 'author':
+        return 'Author';
+      case 'coordinate':
+        return 'Coordinate';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  getSuggestionValue(suggestion: any): string {
+    switch (suggestion.type) {
+      case 'taxon':
+        return suggestion.acceptedName || suggestion.scientificName;
+      case 'author':
+        return suggestion.correctedAuthor;
+      case 'coordinate':
+        return `${suggestion.suggestedLat}, ${suggestion.suggestedLng}`;
+      default:
+        return 'N/A';
+    }
+  }
+
+  applySuggestion(recordIndex: number, suggestion: any) {
+    const record = this.currentRecords[recordIndex];
+
+    if (!record.accepted) {
+      record.accepted = { ...record.original };
+    }
+
+    switch (suggestion.type) {
+      case 'taxon':
+        if (suggestion.acceptedName) {
+          record.accepted.scientificName = suggestion.acceptedName;
+        } else if (suggestion.scientificName) {
+          record.accepted.scientificName = suggestion.scientificName;
+        }
+        if (suggestion.family) record.accepted.family = suggestion.family;
+        if (suggestion.genus) record.accepted.genus = suggestion.genus;
+        break;
+
+      case 'author':
+        record.accepted.scientificNameAuthorship = suggestion.correctedAuthor;
+        break;
+
+      case 'coordinate':
+        record.accepted.decimalLatitude = suggestion.suggestedLat;
+        record.accepted.decimalLongitude = suggestion.suggestedLng;
+        break;
+    }
+
+    console.log(`Applied suggestion to record ${recordIndex}:`, suggestion);
+  }
+
+  confirmAndContinue() {
+    // emit the updated currentChunk
+    this.completed.emit(this.currentChunk);
+  }
+  resetRecord(i: number) {
+    this.currentChunk[i].accepted = { ...this.currentChunk[i].original };
+  }
+
+  resetChunk() {
+    // Reset all accepted values to original values
+    this.currentRecords.forEach((record) => {
+      record.accepted = { ...record.original };
     });
+    console.log('Chunk reset to original values');
   }
 
-  saveAndContinue() {
-    const corrections = this.currentChunk.map((record) => ({
-      ...record,
-      accepted: this.getAcceptedCorrections(record),
-    }));
-    this.completed.emit(corrections);
-  }
+  hasValidationErrors(): boolean {
+    // Check for basic validation errors
+    return this.currentRecords.some((record) => {
+      const accepted = record.accepted as TaxonRecord;
 
-  applySuggestion(
-    record: CleaningResult,
-    suggestion: AuthorSuggestion | CoordSuggestion | TaxonSuggestion
-  ) {
-    // Type-safe suggestion handling
-    if (suggestion.type === 'author-normalization') {
-      record.accepted = {
-        ...record.accepted,
-        scientificNameAuthorship: suggestion.value,
-      };
-    } else if (suggestion.type === 'coordinate-correction') {
-      record.accepted = {
-        ...record.accepted,
-        decimalLatitude: suggestion.value.decimalLatitude,
-        decimalLongitude: suggestion.value.decimalLongitude,
-      };
-    } else if (suggestion.type === 'taxon-resolution') {
-      record.accepted = {
-        ...record.accepted,
-        scientificName: suggestion.value.scientificName,
-        taxonRank: suggestion.value.taxonRank,
-      };
-    }
-  }
+      if (!accepted.decimalLatitude || !accepted.decimalLongitude) return false;
 
-  private getAcceptedCorrections(
-    record: CleaningResult
-  ): CleaningResult['accepted'] {
-    // Initialize with original values as fallback
-    const baseAccepted = {
-      scientificName: record.original.scientificName,
-      acceptedNameUsageID: '',
-      taxonomicStatus: 'unprocessed' as const,
-    };
-
-    // Merge with any existing corrections
-    const merged = {
-      ...baseAccepted,
-      ...record.accepted,
-    };
-
-    // Apply taxonomy suggestions
-    record.suggestions.forEach((suggestion) => {
-      if (isTaxonSuggestion(suggestion)) {
-        merged.scientificName =
-          suggestion.value.scientificName || merged.scientificName;
-        merged.acceptedNameUsageID = suggestion.value.acceptedNameUsageID || '';
-        merged.taxonomicStatus = 'unprocessed';
-      }
+      return (
+        !accepted.scientificName ||
+        accepted.scientificName.trim().length === 0 ||
+        accepted.decimalLatitude < -90 ||
+        accepted.decimalLatitude > 90 ||
+        accepted.decimalLongitude < -180 ||
+        accepted.decimalLongitude > 180
+      );
     });
-
-    // Apply user edits from the UI
-    if (record.accepted?.scientificName) {
-      merged.scientificName = record.accepted.scientificName;
-      merged.taxonomicStatus = 'unprocessed';
-    }
-
-    return merged;
-  }
-
-  getSuggestionDisplay(
-    suggestion: AuthorSuggestion | CoordSuggestion | TaxonSuggestion
-  ): string {
-    if (isTaxonSuggestion(suggestion)) {
-      return suggestion.value.scientificName || '';
-    } else if (suggestion.type === 'coordinate-correction') {
-      return `${suggestion.value.decimalLatitude}, ${suggestion.value.decimalLongitude}`;
-    } else {
-      return suggestion.value.toString();
-    }
   }
 }

@@ -1,100 +1,3 @@
-// // apps/cleaning-tool/src/app/modules/cleaning/components/results-review/results-review.component.ts
-
-// import { Component } from '@angular/core';
-// import { Router } from '@angular/router';
-// import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service';
-
-// @Component({
-//   selector: 'app-results-review',
-//   template: `
-//     <div class="review-container">
-//       <h2>Cleaning Summary</h2>
-
-//       <!-- Statistics Overview -->
-//       <div class="stats-grid">
-//         <div class="stat-card">
-//           <h3>Total Records</h3>
-//           <p>{{ totalRecords }}</p>
-//         </div>
-//         <div class="stat-card">
-//           <h3>Issues Found</h3>
-//           <p>{{ totalIssues }}</p>
-//         </div>
-//         <div class="stat-card">
-//           <h3>Auto-Corrected</h3>
-//           <p>{{ autoCorrected }}</p>
-//         </div>
-//       </div>
-
-//       <!-- Chunk Navigation -->
-//       <div class="chunk-navigation">
-//         <button mat-icon-button (click)="previousChunk()">
-//           <mat-icon>chevron_left</mat-icon>
-//         </button>
-//         <span>Chunk {{ currentChunk + 1 }} of {{ totalChunks }}</span>
-//         <button mat-icon-button (click)="nextChunk()">
-//           <mat-icon>chevron_right</mat-icon>
-//         </button>
-//       </div>
-
-//       <!-- Final Actions -->
-//       <div class="final-actions">
-//         <button mat-raised-button color="primary" (click)="saveToDatabase()">
-//           Save to Database
-//         </button>
-//         <button mat-raised-button (click)="downloadResults()">
-//           Download Cleaned Data
-//         </button>
-//         <button mat-button (click)="startNewSession()">
-//           New Cleaning Session
-//         </button>
-//       </div>
-//     </div>
-//   `,
-//   standalone: false,
-// })
-// export class ResultsReviewComponent {
-//   totalRecords = 0;
-//   totalIssues = 0;
-//   autoCorrected = 0;
-//   currentChunk = 0;
-//   totalChunks = 0;
-
-//   constructor(
-//     private cleaningService: CleaningService,
-//     private router: Router
-//   ) {}
-
-//   saveToDatabase(): void {
-//     this.cleaningService.finalizeJob().subscribe({
-//       next: () => this.router.navigate(['/success']),
-//       error: (err: any) => console.error('Save failed', err),
-//     });
-//   }
-
-//   downloadResults(): void {
-//     this.cleaningService.exportResults().subscribe((blob: any) => {
-//       const url = window.URL.createObjectURL(blob);
-//       const a = document.createElement('a');
-//       a.href = url;
-//       a.download = `cleaned-data-${Date.now()}.json`;
-//       a.click();
-//     });
-//   }
-
-//   previousChunk() {
-//     if (this.currentChunk > 0) this.currentChunk--;
-//   }
-
-//   nextChunk() {
-//     if (this.currentChunk < this.totalChunks - 1) this.currentChunk++;
-//   }
-
-//   startNewSession() {
-//     window.location.reload(); // Or your reset logic
-//   }
-// }
-
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service';
@@ -102,93 +5,12 @@ import {
   CleaningResult,
   JobProgress,
 } from 'apps/ui/src/app/core/models/data.models';
+import { tap } from 'rxjs';
 
 @Component({
   selector: 'app-results-review',
-  template: `
-    <div class="review-container">
-      <h2>Cleaning Summary</h2>
-      <div *ngIf="loading" class="loading-overlay">
-        <mat-spinner diameter="50"></mat-spinner>
-        <p>Loading results...</p>
-      </div>
-      <ng-container *ngIf="!loading && progress">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <h3>Total Records</h3>
-            <p>{{ totalRecords }}</p>
-          </div>
-          <div class="stat-card">
-            <h3>Issues Found</h3>
-            <p>{{ totalIssues }}</p>
-          </div>
-          <div class="stat-card">
-            <h3>Auto-Corrected</h3>
-            <p>{{ autoCorrected }}</p>
-          </div>
-        </div>
-
-        <div class="chunk-navigation">
-          <button
-            mat-icon-button
-            (click)="previousChunk()"
-            [disabled]="currentChunkIndex === 0"
-          >
-            <mat-icon>chevron_left</mat-icon>
-          </button>
-          <span>Chunk {{ currentChunkIndex + 1 }} of {{ totalChunks }}</span>
-          <button
-            mat-icon-button
-            (click)="nextChunk()"
-            [disabled]="currentChunkIndex === totalChunks - 1"
-          >
-            <mat-icon>chevron_right</mat-icon>
-          </button>
-        </div>
-
-        <!-- Display current chunk records -->
-        <div
-          *ngIf="currentChunk && currentChunk.length > 0"
-          class="records-list"
-        >
-          <div class="record-card" *ngFor="let record of currentChunk">
-            <div>
-              <strong>Original:</strong> {{ record.original.scientificName }}
-            </div>
-            <div>
-              <strong>Accepted:</strong>
-              {{ record.accepted?.scientificName || '-' }}
-            </div>
-            <div>
-              <strong>Issues:</strong>
-              <span *ngFor="let issue of record.issues">
-                {{ issue.message }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          *ngIf="currentChunk && currentChunk.length === 0"
-          class="empty-chunk"
-        >
-          No records in this chunk.
-        </div>
-
-        <div class="final-actions">
-          <button mat-raised-button color="primary" (click)="saveToDatabase()">
-            Save to Database
-          </button>
-          <button mat-raised-button (click)="downloadResults()">
-            Download Cleaned Data
-          </button>
-          <button mat-button (click)="startNewSession()">
-            New Cleaning Session
-          </button>
-        </div>
-      </ng-container>
-    </div>
-  `,
+  templateUrl: './results-review.component.html',
+  styleUrls: ['./results-review.component.scss'],
   standalone: false,
 })
 export class ResultsReviewComponent implements OnInit {
@@ -200,7 +22,8 @@ export class ResultsReviewComponent implements OnInit {
 
   progress: JobProgress | null = null;
   currentChunk: CleaningResult[] = [];
-  jobId: string | null = null;
+  jobIds: string[] = [];
+  primaryJobId: string | null = null;
   loading = true;
 
   constructor(
@@ -209,12 +32,21 @@ export class ResultsReviewComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Get jobId from router state
+    // Get job information from router state
     const nav = this.router.getCurrentNavigation();
-    this.jobId = nav?.extras?.state?.['jobId'] || null;
+    const state = nav?.extras?.state || history.state;
 
-    if (!this.jobId) {
-      // fallback: redirect to dashboard or error
+    this.primaryJobId = state?.['primaryJobId'] || state?.['jobId'] || null;
+    this.jobIds =
+      state?.['jobIds'] || (this.primaryJobId ? [this.primaryJobId] : []);
+
+    console.log('Results component initialized with:', {
+      primaryJobId: this.primaryJobId,
+      jobIds: this.jobIds,
+    });
+
+    if (!this.primaryJobId) {
+      console.error('No job ID found, redirecting to dashboard');
       this.router.navigate(['/']);
       return;
     }
@@ -224,15 +56,17 @@ export class ResultsReviewComponent implements OnInit {
 
   fetchResults() {
     this.loading = true;
-    this.cleaningService.getJobProgress(this.jobId!).subscribe({
+    this.cleaningService.getJobProgress(this.primaryJobId!).subscribe({
       next: (progress) => {
+        console.log('Fetched results progress:', progress);
         this.progress = progress;
         this.totalChunks = progress.totalChunks;
         this.currentChunkIndex = 0;
         this.updateStatsAndChunk();
         this.loading = false;
       },
-      error: () => {
+      error: (error) => {
+        console.error('Error fetching results:', error);
         this.loading = false;
         this.progress = null;
       },
@@ -241,22 +75,67 @@ export class ResultsReviewComponent implements OnInit {
 
   updateStatsAndChunk() {
     if (!this.progress) return;
+
+    // Get all completed chunks and flatten them
     const allRecords = (this.progress.chunks || [])
-      .flat()
-      .filter(Boolean) as CleaningResult[];
+      .filter((chunk) => chunk !== null && Array.isArray(chunk))
+      .flat() as CleaningResult[];
+
+    console.log('Processing stats for', allRecords.length, 'total records');
 
     this.totalRecords = allRecords.length;
     this.totalIssues = allRecords.reduce(
       (sum, rec) => sum + (rec.issues?.length || 0),
       0
     );
-    this.autoCorrected = allRecords.filter(
-      (rec) => rec.metadata?.autoApplied
+    this.autoCorrected = allRecords.filter((rec) =>
+      this.hasCorrections(rec)
     ).length;
 
-    // Update current chunk
-    this.currentChunk = (this.progress.chunks?.[this.currentChunkIndex] ||
-      []) as CleaningResult[];
+    // Update current chunk - ensure it's valid
+    const chunkData = this.progress.chunks?.[this.currentChunkIndex];
+    this.currentChunk = (
+      Array.isArray(chunkData) ? chunkData : []
+    ) as CleaningResult[];
+
+    console.log(
+      'Current chunk',
+      this.currentChunkIndex,
+      'has',
+      this.currentChunk.length,
+      'records'
+    );
+  }
+
+  hasCorrections(record: CleaningResult): boolean {
+    if (!record.accepted) return false;
+
+    const original = record.original;
+    const accepted = record.accepted;
+
+    return (
+      original.scientificName !== accepted.scientificName ||
+      original.scientificNameAuthorship !== accepted.scientificNameAuthorship ||
+      original.decimalLatitude !== accepted.decimalLatitude ||
+      original.decimalLongitude !== accepted.decimalLongitude ||
+      original.family !== accepted.family
+    );
+  }
+
+  getIssueMessages(issues: any[]): string {
+    return issues?.map((issue) => issue.message).join(', ') || '';
+  }
+
+  getChunkIssues(): number {
+    return this.currentChunk.reduce(
+      (total, record) => total + (record.issues?.length || 0),
+      0
+    );
+  }
+
+  getChunkCorrections(): number {
+    return this.currentChunk.filter((record) => this.hasCorrections(record))
+      .length;
   }
 
   previousChunk() {
@@ -273,24 +152,84 @@ export class ResultsReviewComponent implements OnInit {
     }
   }
 
-  saveToDatabase(): void {
-    this.cleaningService.finalizeJob().subscribe({
-      next: () => this.router.navigate(['/success']),
-      error: (err: any) => console.error('Save failed', err),
+  downloadResults(): void {
+    if (!this.progress) return;
+
+    // Collect all records from all chunks
+    const allRecords = (this.progress.chunks || [])
+      .filter((chunk) => chunk !== null && Array.isArray(chunk))
+      .flat() as CleaningResult[];
+
+    // Create downloadable data with cleaned values
+    const cleanedData = allRecords.map((record) => {
+      const cleanedRecord = { ...record.original };
+
+      // Apply corrections if they exist
+      if (record.accepted) {
+        Object.keys(record.accepted).forEach((key) => {
+          if (
+            record.accepted![key] !== undefined &&
+            record.accepted![key] !== null
+          ) {
+            cleanedRecord[key] = record.accepted![key];
+          }
+        });
+      }
+
+      // Add metadata about the cleaning process
+      cleanedRecord['_cleaning_metadata'] = {
+        issues_found: record.issues?.length || 0,
+        corrections_applied: this.hasCorrections(record),
+        suggestions_available: record.suggestions?.length || 0,
+        processed_at: new Date().toISOString(),
+      };
+
+      return cleanedRecord;
     });
+
+    // Create and download file
+    const blob = new Blob([JSON.stringify(cleanedData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cleaned-taxon-data-${
+      new Date().toISOString().split('T')[0]
+    }.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    console.log('Downloaded', cleanedData.length, 'cleaned records');
   }
 
-  downloadResults(): void {
-    this.cleaningService.exportResults().subscribe((blob: any) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `cleaned-data-${Date.now()}.json`;
-      a.click();
-    });
+  saveResults(): void {
+    // This could be implemented to save to a database or cloud storage
+    console.log('Save results functionality not yet implemented');
+    // For now, just show a message
+    alert(
+      'Save functionality will be implemented to store results in your preferred location.'
+    );
+  }
+
+  retryLoad(): void {
+    this.fetchResults();
   }
 
   startNewSession() {
-    window.location.reload();
+    this.cleaningService
+      .flushJobs()
+      .pipe(tap(() => console.log('backend confirmed all jobs flushed')))
+      .subscribe({
+        next: () => {
+          // now that flush actually happened, clear any local state:
+          this.jobIds = [];
+          // navigate home
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err) => console.error('Flush failed', err),
+      });
   }
 }
