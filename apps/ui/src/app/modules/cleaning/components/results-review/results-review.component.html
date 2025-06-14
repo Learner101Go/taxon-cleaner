@@ -1,127 +1,150 @@
 <div class="results-review">
-  <!-- Loading Overlay -->
+  <!-- 1. Loading Overlay -->
   <div *ngIf="loading" class="overlay">
-    <div class="spinner"></div>
+    <mat-spinner diameter="48"></mat-spinner>
     <p>Loading results…</p>
   </div>
 
-  <!-- Main Content -->
-  <ng-container *ngIf="!loading && progress">
-    <!-- 1. Summary Cards -->
-    <section class="summary-cards">
-      <div class="card">
-        <div class="icon">📋</div>
-        <div class="text">
-          <div class="value">{{ totalRecords }}</div>
-          <div class="label">Total Records</div>
+  <!-- 2. Main Content (when not loading) -->
+  <ng-container *ngIf="!loading">
+    <!-- 2a. No results / error state -->
+    <ng-container
+      *ngIf="allResults && allResults.length > 0; else noResultsTemplate"
+    >
+      <!-- 3. Summary Cards -->
+      <section class="summary-cards">
+        <div class="card">
+          <div class="icon">📋</div>
+          <div class="text">
+            <div class="value">{{ totalRecords }}</div>
+            <div class="label">Total Records</div>
+          </div>
         </div>
-      </div>
-      <div class="card issues">
-        <div class="icon">⚠️</div>
-        <div class="text">
-          <div class="value">{{ totalIssues }}</div>
-          <div class="label">Issues Found</div>
+        <div class="card issues">
+          <div class="icon">⚠️</div>
+          <div class="text">
+            <div class="value">{{ totalIssues }}</div>
+            <div class="label">Issues Found</div>
+          </div>
         </div>
-      </div>
-      <div class="card corrections">
-        <div class="icon">🛠️</div>
-        <div class="text">
-          <div class="value">{{ autoCorrected }}</div>
-          <div class="label">Auto-Corrected</div>
+        <div class="card corrections">
+          <div class="icon">🛠️</div>
+          <div class="text">
+            <div class="value">{{ autoCorrected }}</div>
+            <div class="label">Auto-Corrected</div>
+          </div>
         </div>
-      </div>
-      <div class="card chunks">
-        <div class="icon">📦</div>
-        <div class="text">
-          <div class="value">{{ totalChunks }}</div>
-          <div class="label">Chunks Processed</div>
+        <div class="card pages">
+          <div class="icon">📄</div>
+          <div class="text">
+            <div class="value">{{ getTotalPages() }}</div>
+            <div class="label">Pages</div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 2. Chunk Navigator -->
-    <section class="navigator">
-      <button
-        class="nav-btn"
-        (click)="previousChunk()"
-        [disabled]="currentChunkIndex === 0"
-      >
-        ‹
-      </button>
-      <span class="nav-info"
-        >Chunk {{ currentChunkIndex + 1 }} of {{ totalChunks }}</span
-      >
-      <button
-        class="nav-btn"
-        (click)="nextChunk()"
-        [disabled]="currentChunkIndex === totalChunks - 1"
-      >
-        ›
-      </button>
-    </section>
-
-    <!-- 3. Records List -->
-    <section class="records">
-      <header class="records-header">
-        <h4>
-          Chunk {{ currentChunkIndex + 1 }} Records ({{ currentChunk.length }})
-        </h4>
-        <small>
-          {{ getChunkIssues() }} issue{{ getChunkIssues() !== 1 ? 's' : '' }},
-          {{ getChunkCorrections() }} corrected
-        </small>
-      </header>
-
-      <div class="records-container">
-        <div
-          *ngFor="let rec of currentChunk; let i = index"
-          class="record"
-          [class.has-issues]="rec.issues.length"
-          [class.has-corrections]="hasCorrections(rec)"
+      <!-- 4. Pagination Controls -->
+      <section class="navigator">
+        <button
+          class="nav-btn"
+          (click)="previousPage()"
+          [disabled]="currentPage === 0"
         >
-          <div class="side">
-            <div class="title">Orig</div>
-            <div class="line">
-              <strong>{{ rec.original.scientificName }}</strong>
-            </div>
-            <div *ngIf="rec.original.scientificNameAuthorship" class="sub">
-              {{ rec.original.scientificNameAuthorship }}
-            </div>
-          </div>
+          ‹ Prev
+        </button>
+        <span class="nav-info">
+          Page {{ currentPage + 1 }} of {{ getTotalPages() }}
+        </span>
+        <button
+          class="nav-btn"
+          (click)="nextPage()"
+          [disabled]="currentPage + 1 >= getTotalPages()"
+        >
+          Next ›
+        </button>
+      </section>
 
-          <div class="side">
-            <div class="title">Cleaned</div>
-            <div class="line">
-              <strong>{{
-                rec.accepted.scientificName || rec.original.scientificName
-              }}</strong>
-            </div>
-            <div *ngIf="rec.accepted.scientificNameAuthorship" class="sub">
-              {{ rec.accepted.scientificNameAuthorship }}
-            </div>
-          </div>
+      <!-- 5. Records List -->
+      <section class="records">
+        <header class="records-header">
+          <h4>
+            Showing records {{ currentPage * pageSize + 1 }} –
+            {{ getEndIndex() }} of {{ totalRecords }}
+          </h4>
+          <small> {{ totalRecords }} total, page size {{ pageSize }} </small>
+        </header>
 
-          <div class="details" *ngIf="rec.issues.length">
-            <div class="title">Issues</div>
-            <div class="line">{{ getIssueMessages(rec.issues) }}</div>
+        <div class="records-container">
+          <div
+            *ngFor="let rec of pagedResults; let idx = index"
+            class="record"
+            [class.has-issues]="rec.issues.length"
+            [class.has-corrections]="hasCorrections(rec)"
+          >
+            <!-- Original fields -->
+            <div class="side original">
+              <div class="title">Original</div>
+              <div *ngIf="rec.original.authorName" class="line">
+                <strong>Author:</strong> {{ rec.original.authorName }}
+              </div>
+              <div *ngIf="rec.original.standardForm" class="sub">
+                <em>Standard Form:</em> {{ rec.original.standardForm }}
+              </div>
+              <div *ngIf="rec.original.scientificNameAuthorship" class="sub">
+                <em>Authorship:</em> {{ rec.original.scientificNameAuthorship }}
+              </div>
+              <div *ngIf="rec.original.scientificName" class="line">
+                <strong>Name:</strong> {{ rec.original.scientificName }}
+              </div>
+            </div>
+
+            <!-- Cleaned/Accepted fields -->
+            <div class="side cleaned">
+              <div class="title">Cleaned</div>
+              <div *ngIf="rec.accepted?.authorName" class="line">
+                <strong>Author:</strong> {{ rec.accepted.authorName }}
+              </div>
+              <div *ngIf="rec.accepted?.standardForm" class="sub">
+                <em>Standard Form:</em> {{ rec.accepted.standardForm }}
+              </div>
+              <div *ngIf="rec.accepted?.scientificNameAuthorship" class="sub">
+                <em>Authorship:</em> {{ rec.accepted.scientificNameAuthorship }}
+              </div>
+              <div *ngIf="rec.accepted?.scientificName" class="line">
+                <strong>Name:</strong> {{ rec.accepted.scientificName }}
+              </div>
+            </div>
+
+            <!-- Issues summary -->
+            <div class="details" *ngIf="rec.issues.length">
+              <div class="title">Issues</div>
+              <div class="line">
+                {{ getIssueMessages(rec.issues) }}
+              </div>
+            </div>
           </div>
         </div>
+      </section>
+
+      <!-- 6. Final Actions -->
+      <footer class="actions">
+        <button class="btn primary" (click)="downloadResults()">
+          Download
+        </button>
+        <button class="btn" (click)="startNewSession()">New Session</button>
+      </footer>
+    </ng-container>
+
+    <!-- 2b. No-results / error -->
+    <ng-template #noResultsTemplate>
+      <div class="overlay">
+        <div class="icon-large">❌</div>
+        <h3>No results found or error loading results</h3>
+        <button class="btn primary" (click)="retryLoad()">Retry</button>
+        <button class="btn" (click)="startNewSession()">
+          Back to Dashboard
+        </button>
       </div>
-    </section>
-
-    <!-- 4. Final Actions -->
-    <footer class="actions">
-      <button class="btn primary" (click)="downloadResults()">Download</button>
-      <button class="btn secondary" (click)="saveResults()">Save</button>
-      <button class="btn" (click)="startNewSession()">New Session</button>
-    </footer>
+    </ng-template>
   </ng-container>
-
-  <!-- Error State -->
-  <div *ngIf="!loading && !progress" class="overlay">
-    <div class="icon-large">❌</div>
-    <h3>Unable to load results</h3>
-    <button class="btn primary" (click)="retryLoad()">Retry</button>
-    <button class="btn" (click)="startNewSession()">Back to Dashboard</button>
-  </div>
 </div>

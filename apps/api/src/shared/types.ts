@@ -1,38 +1,38 @@
-// src/shared/types.ts
-export interface TaxonRecord {
-  scientificName: string;
-  scientificNameAuthorship?: string;
-  taxonRank?: string;
-  decimalLatitude?: number;
-  decimalLongitude?: number;
-  geodeticDatum?: string;
-  family?: string;
-  genus?: string;
-  specificEpithet?: string;
-  infraspecificEpithet?: string;
-  recordedBy?: string;
-  occurrenceID?: string;
-  eventDate?: string;
-  [key: string]: any; // Allow for dynamic fields
-}
+// // src/shared/types.ts
+// export interface TaxonRecord {
+//   scientificName: string;
+//   scientificNameAuthorship?: string;
+//   taxonRank?: string;
+//   decimalLatitude?: number;
+//   decimalLongitude?: number;
+//   geodeticDatum?: string;
+//   family?: string;
+//   genus?: string;
+//   specificEpithet?: string;
+//   infraspecificEpithet?: string;
+//   recordedBy?: string;
+//   occurrenceID?: string;
+//   eventDate?: string;
+//   [key: string]: any; // Allow for dynamic fields
+// }
 
-export interface JobData {
-  jobGroupId?: string;
-  records: TaxonRecord[];
-  chunks?: TaxonRecord[][];
-  source: string;
-  chunkSize: number;
-  chunkIndex?: number;
-  confidenceThreshold?: number;
-  autoCorrectAuthors?: boolean;
-  validateCoordinates?: boolean;
-  resolveTaxonomy?: boolean;
-  processedChunks?: any;
-  parentJobId?: string;
-  isParent?: boolean;
-  totalChunks?: number;
-  timestamp?: string;
-}
+// export interface JobData {
+//   jobGroupId?: string;
+//   records: TaxonRecord[];
+//   chunks?: TaxonRecord[][];
+//   source: string;
+//   chunkSize: number;
+//   chunkIndex?: number;
+//   confidenceThreshold?: number;
+//   autoCorrectAuthors?: boolean;
+//   validateCoordinates?: boolean;
+//   resolveTaxonomy?: boolean;
+//   processedChunks?: any;
+//   parentJobId?: string;
+//   isParent?: boolean;
+//   totalChunks?: number;
+//   timestamp?: string;
+// }
 
 export interface DataSettings {
   autoCorrectAuthors: boolean;
@@ -50,13 +50,13 @@ export interface JobResponseDto {
   records: TaxonRecord[];
 }
 
-export interface JobProgress {
-  chunks: Array<CleaningResult[] | null>;
-  currentChunk: number;
-  totalChunks: number;
-}
+// export interface JobProgress {
+//   chunks: Array<CleaningResult[] | null>;
+//   currentChunk: number;
+//   totalChunks: number;
+// }
 
-// ----- Issue Types -----
+// // ----- Issue Types -----
 export interface Issue {
   type: 'error' | 'warning' | 'info';
   message: string;
@@ -88,7 +88,7 @@ export interface TaxonIssue extends Issue {
   message: string;
 }
 
-// ----- Suggestion Types -----
+// // ----- Suggestion Types -----
 export interface AuthorSuggestion {
   type: 'author';
   confidence: number; // 0.0–1.0
@@ -114,7 +114,7 @@ export interface TaxonSuggestion {
   acceptedNameUsageID?: string;
 }
 
-// ----- Module Result Wrappers -----
+// // ----- Module Result Wrappers -----
 export interface AuthorResult {
   original?: string;
   issues: AuthorIssue[];
@@ -131,7 +131,7 @@ export interface TaxonResult {
   suggestions: TaxonSuggestion[];
 }
 
-// ----- Combined Cleaning Result -----
+// // ----- Combined Cleaning Result -----
 export interface CleaningResult {
   original: TaxonRecord;
   issues: Issue[];
@@ -144,13 +144,79 @@ export interface CleaningResult {
   };
 }
 
-export interface CreateJobResponseDto {
-  jobIds: string[];
-  totalChunks: number;
-}
+// export interface CreateJobResponseDto {
+//   jobIds: string[];
+//   totalChunks: number;
+// }
 
 export function chunkArray<T>(arr: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
     arr.slice(i * size, i * size + size)
   );
+}
+
+//////////////////////////////////////////////
+
+// src/shared/types.ts (Updated)
+export interface TaxonRecord {
+  id?: number;
+  authorName: string;
+  authorForename?: string;
+  authorSurname?: string;
+  standardForm?: string;
+  source?: 'ipni' | 'pterido';
+  scientificName?: string;
+  scientificNameAuthorship?: string;
+  taxonRank?: string;
+  decimalLatitude?: number;
+  decimalLongitude?: number;
+  geodeticDatum?: string;
+  family?: string;
+  genus?: string;
+  specificEpithet?: string;
+  infraspecificEpithet?: string;
+  recordedBy?: string;
+  occurrenceID?: string;
+  eventDate?: string;
+  [key: string]: any;
+}
+
+export interface SessionData {
+  sessionId: string;
+  totalRecords: number;
+  totalChunks: number;
+  chunkSize: number;
+  processedChunks: number;
+  settings: DataSettings;
+  createdAt: Date;
+}
+
+export interface JobData {
+  sessionId: string;
+  chunkIndex: number;
+  totalChunks: number;
+  records: TaxonRecord[];
+  settings: DataSettings;
+}
+
+export interface SessionProgress {
+  sessionId: string;
+  totalChunks: number;
+  processedChunks: number;
+  readyChunks: number[];
+  currentChunk: number;
+  status: 'processing' | 'ready' | 'completed';
+}
+
+export interface ChunkData {
+  chunkIndex: number;
+  results: CleaningResult[];
+  approved: boolean;
+  corrections?: CleaningResult[];
+}
+
+export interface CreateSessionResponse {
+  sessionId: string;
+  totalChunks: number;
+  totalRecords: number;
 }

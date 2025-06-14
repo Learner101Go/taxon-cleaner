@@ -9,6 +9,15 @@ import { FlowProducer } from 'bullmq';
   imports: [
     BullModule.registerQueue({
       name: 'cleaning',
+      defaultJobOptions: {
+        removeOnComplete: 10,
+        removeOnFail: 5,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      },
     }),
     ProcessingModule,
   ],
@@ -21,7 +30,9 @@ import { FlowProducer } from 'bullmq';
         new FlowProducer({
           connection: {
             host: process.env.REDIS_HOST,
-            port: +process.env.REDIS_PORT,
+            port: Number(process.env.REDIS_PORT),
+            maxRetriesPerRequest: 3,
+            retryDelayOnFailover: 100,
           },
         }),
     },

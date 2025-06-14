@@ -104,15 +104,15 @@ export interface CreateJobResponseDto {
   totalRecords?: number;
 }
 
-export interface JobProgress {
-  status: string;
-  jobId: string;
-  chunks: (CleaningResult[] | null)[];
-  currentChunk: number;
-  totalChunks: number;
-  processedRecords?: any;
-  totalRecords?: number;
-}
+// export interface JobProgress {
+//   status: string;
+//   jobId: string;
+//   chunks: (CleaningResult[] | null)[];
+//   currentChunk: number;
+//   totalChunks: number;
+//   processedRecords?: any;
+//   totalRecords?: number;
+// }
 
 // Optional: For strong typing of data sources
 export interface DataSourceConfig {
@@ -131,10 +131,10 @@ export interface TaxonLoadEvent {
   source: 'file-upload' | 'text-input';
 }
 
-export interface CreateJobResponse {
-  jobIds: string[];
-  totalChunks: number;
-}
+// export interface CreateJobResponse {
+//   jobIds: string[];
+//   totalChunks: number;
+// }
 
 export function isAuthorSuggestion(
   suggestion: any
@@ -152,4 +152,22 @@ export function isTaxonSuggestion(
   suggestion: any
 ): suggestion is TaxonSuggestion {
   return suggestion.type === 'taxon';
+}
+
+////////////////////////////////////////////////
+
+// apps/ui/src/app/core/models/data.models.ts (Updated interfaces)
+export interface SessionProgress {
+  sessionId: string;
+  totalChunks: number;
+  processedChunks: number;
+  readyChunks: number[];
+  currentChunk: number;
+  status: 'processing' | 'ready' | 'completed';
+}
+
+export interface CreateSessionResponse {
+  sessionId: string;
+  totalChunks: number;
+  totalRecords: number;
 }

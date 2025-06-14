@@ -3,6 +3,25 @@ services:
   # Redis for cleaning tool (on port 6380 internally, 6380 on host)
   cleaning-redis:
     image: redis:7-alpine
+    # Configure Redis server memory limits and eviction policy via command-line args.
+    # This ensures Redis enforces maxmemory and eviction policy at runtime.
+    command: [
+        'redis-server',
+        '--maxmemory',
+        '2gb',
+        '--maxmemory-policy',
+        'noeviction',
+        # Optional: persistence settings; adjust or remove as needed
+        '--save',
+        '900',
+        '1', # snapshot every 900s if >=1 change
+        '--appendonly',
+        'yes', # enable AOF
+        '--appendfsync',
+        'everysec', # AOF fsync policy
+        # You can mount a custom redis.conf instead if preferred:
+        # e.g. "redis-server", "/usr/local/etc/redis/redis.conf"
+      ]
     ports:
       - '6380:6379'
     volumes:
@@ -10,6 +29,12 @@ services:
     networks:
       - cleaning-net
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   # NestJS API service
   api:

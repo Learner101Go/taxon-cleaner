@@ -10,10 +10,8 @@
   </header>
 
   <!-- ——— Initial / Reset View ——— -->
-  <section
-    class="dashboard__setup"
-    *ngIf="!jobIds.length && !allChunksCompleted"
-  >
+  <!-- Show setup when no sessionId yet and not completed -->
+  <section class="dashboard__setup" *ngIf="!sessionId && !allChunksCompleted">
     <aside class="setup__sidebar">
       <app-settings-panel
         [settings]="settings"
@@ -22,18 +20,33 @@
     </aside>
     <main class="setup__main">
       <h2>Load Your Data</h2>
-      <app-data-input (dataLoaded)="startCleaning($event)"></app-data-input>
+      <app-data-input
+        [mode]="cleanMode"
+        (dataLoaded)="startCleaning($event)"
+      ></app-data-input>
     </main>
   </section>
 
   <!-- ——— Chunk Review View ——— -->
-  <section
-    class="dashboard__review"
-    *ngIf="jobIds.length && !allChunksCompleted"
-  >
+  <!-- Show review once sessionId exists and not yet allChunksCompleted -->
+  <section class="dashboard__review" *ngIf="sessionId && !allChunksCompleted">
     <main class="review__main">
+      <!-- 1) If still initializing and no chunk ready yet: show spinner -->
+      <div
+        *ngIf="
+          isInitializing &&
+          (!sessionProgress || (sessionProgress.readyChunks?.length || 0) === 0)
+        "
+        class="overlay"
+      >
+        <mat-spinner diameter="48"></mat-spinner>
+        <p>Initializing session…</p>
+      </div>
+
+      <!-- 2) When not initializing and a current chunk is loaded: show chunk processor -->
       <app-chunk-processor
-        [jobId]="currentJobId"
+        *ngIf="!isInitializing && currentRecords?.length"
+        [jobId]="sessionId"
         [currentChunkIndex]="currentChunkIndex"
         [totalChunks]="totalChunks"
         [currentChunk]="currentRecords"
@@ -41,19 +54,38 @@
         (previousChunk)="onPreviousChunk()"
         (nextChunk)="onNextChunk()"
       ></app-chunk-processor>
+
+      <!-- 3) If not initializing, but no currentRecords and next chunk not yet ready: waiting message -->
+      <div
+        *ngIf="
+          !isInitializing &&
+          sessionProgress &&
+          currentRecords.length === 0 &&
+          !sessionProgress.readyChunks.includes(currentChunkIndex + 1)
+        "
+        class="waiting"
+      >
+        <p>Waiting for next chunk to be ready…</p>
+      </div>
     </main>
 
+    <!-- Footer with progress bar -->
     <footer class="review__footer">
       <div class="progress">
         <div class="progress__bar">
           <div
             class="progress__fill"
-            [style.width.%]="(processedChunks / totalChunks) * 100"
+            [style.width.%]="
+              sessionProgress
+                ? ((sessionProgress.readyChunks.length || 0) / totalChunks) *
+                  100
+                : 0
+            "
           ></div>
         </div>
         <div class="progress__info">
-          {{ processedChunks }} / {{ totalChunks }} chunks (Current:
-          {{ currentChunkIndex + 1 }})
+          {{ sessionProgress?.readyChunks?.length || 0 }} /
+          {{ totalChunks }} chunks (Current: {{ currentChunkIndex + 1 }})
         </div>
       </div>
     </footer>
@@ -69,8 +101,8 @@
     </div>
   </section>
 
-  <!-- ——— Fullscreen Loading Overlay ——— -->
-  <div class="overlay" *ngIf="isLoadingChunk && !currentRecords.length">
+  <!-- ——— Fullscreen Loading Overlay when loading a chunk ——— -->
+  <div class="overlay" *ngIf="isLoadingChunk && currentRecords.length === 0">
     <div class="overlay__box">
       <mat-spinner diameter="48"></mat-spinner>
       <p>Loading chunk data…</p>

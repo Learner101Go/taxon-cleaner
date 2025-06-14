@@ -213,8 +213,115 @@
 //   }
 // }
 
-/////////////////////
+//////////////////////////////////////////////////////////////
 
+// import {
+//   Body,
+//   Controller,
+//   Get,
+//   Param,
+//   Patch,
+//   Post,
+//   NotFoundException,
+// } from '@nestjs/common';
+// import { JobsService } from './jobs.service';
+// import {
+//   CreateJobResponseDto,
+//   DataSettings,
+//   JobData,
+//   JobProgress,
+//   CleaningResult,
+//   TaxonRecord,
+//   JobStatus,
+// } from '../shared/types';
+// import { QueueService } from '../queue/queue.service';
+
+// @Controller('jobs')
+// export class JobsController {
+//   constructor(
+//     private readonly jobsService: JobsService,
+//     private queueService: QueueService
+//   ) {}
+
+//   /**
+//    * POST /api/jobs
+//    * Returns { jobIds: string[], totalChunks: number }
+//    */
+//   @Post()
+//   async create(
+//     @Body() body: { data: TaxonRecord[]; settings: DataSettings }
+//   ): Promise<CreateJobResponseDto> {
+//     const { data, settings } = body;
+
+//     const jobData: JobData = {
+//       records: data,
+//       source: settings.currentSource,
+//       chunkSize: settings.chunkSize,
+//       confidenceThreshold: settings.confidenceThreshold,
+//       autoCorrectAuthors: settings.autoCorrectAuthors,
+//       validateCoordinates: settings.validateCoordinates,
+//       resolveTaxonomy: settings.resolveTaxonomy,
+//     };
+
+//     try {
+//       const job = await this.jobsService.createJob(jobData);
+//       console.log('Job created successfully:', job);
+//       return job;
+//     } catch (error) {
+//       console.error('Error creating job:', error);
+//       throw error;
+//     }
+//   }
+
+//   /**
+//    * GET /api/jobs/:id/chunks/:chunkIndex
+//    * Returns CleaningResult[]
+//    */
+//   @Get(':id/chunks/:chunkIndex')
+//   async getChunk(
+//     @Param('id') jobId: string,
+//     @Param('chunkIndex') chunkIndex: number
+//   ): Promise<CleaningResult[]> {
+//     const chunk = await this.jobsService.getChunkResults(jobId, +chunkIndex);
+//     return chunk;
+//   }
+
+//   /**
+//    * PATCH /api/jobs/:id/chunks/:chunkIndex
+//    * Body: CleaningResult[]
+//    */
+//   @Patch(':id/chunks/:chunkIndex')
+//   async approveChunk(
+//     @Param('id') jobId: string,
+//     @Param('chunkIndex') chunkIndex: number,
+//     @Body() corrections: CleaningResult[]
+//   ) {
+//     return this.jobsService.saveChunkCorrections(
+//       jobId,
+//       +chunkIndex,
+//       corrections
+//     );
+//   }
+
+//   /**
+//    * GET /api/jobs/:id/progress
+//    * Returns { chunks: (CleaningResult[]|null)[], currentChunk: number, totalChunks: number }
+//    */
+//   @Get(':id/progress')
+//   async getProgress(@Param('id') jobId: string): Promise<JobProgress> {
+//     return this.queueService.getJobProgress(jobId);
+//   }
+
+//   /** (unchanged) POST /api/jobs/flush */
+//   @Post('flush')
+//   async flushQueue() {
+//     return this.jobsService.flushAllJobs();
+//   }
+// }
+
+////////////////////////////////////////////////////////////////////////
+
+// src/jobs/jobs.controller.ts (Updated)
 import {
   Body,
   Controller,
@@ -222,99 +329,68 @@ import {
   Param,
   Patch,
   Post,
-  NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import {
-  CreateJobResponseDto,
+  CreateSessionResponse,
   DataSettings,
-  JobData,
-  JobProgress,
   CleaningResult,
   TaxonRecord,
-  JobStatus,
+  SessionProgress,
 } from '../shared/types';
-import { QueueService } from '../queue/queue.service';
 
-@Controller('jobs')
+@Controller('sessions')
 export class JobsController {
-  constructor(
-    private readonly jobsService: JobsService,
-    private queueService: QueueService
-  ) {}
+  constructor(private readonly jobsService: JobsService) {}
 
-  /**
-   * POST /api/jobs
-   * Returns { jobIds: string[], totalChunks: number }
-   */
   @Post()
-  async create(
+  async createSession(
     @Body() body: { data: TaxonRecord[]; settings: DataSettings }
-  ): Promise<CreateJobResponseDto> {
+  ): Promise<CreateSessionResponse> {
     const { data, settings } = body;
-
-    const jobData: JobData = {
-      records: data,
-      source: settings.currentSource,
-      chunkSize: settings.chunkSize,
-      confidenceThreshold: settings.confidenceThreshold,
-      autoCorrectAuthors: settings.autoCorrectAuthors,
-      validateCoordinates: settings.validateCoordinates,
-      resolveTaxonomy: settings.resolveTaxonomy,
-    };
-
-    try {
-      const job = await this.jobsService.createJob(jobData);
-      console.log('Job created successfully:', job);
-      return job;
-    } catch (error) {
-      console.error('Error creating job:', error);
-      throw error;
-    }
+    return this.jobsService.createSession(data, settings);
   }
 
-  /**
-   * GET /api/jobs/:id/chunks/:chunkIndex
-   * Returns CleaningResult[]
-   */
-  @Get(':id/chunks/:chunkIndex')
+  @Get(':sessionId/progress')
+  async getProgress(
+    @Param('sessionId') sessionId: string
+  ): Promise<SessionProgress> {
+    return this.jobsService.getSessionProgress(sessionId);
+  }
+
+  @Get(':sessionId/chunks/:chunkIndex')
   async getChunk(
-    @Param('id') jobId: string,
+    @Param('sessionId') sessionId: string,
     @Param('chunkIndex') chunkIndex: number
   ): Promise<CleaningResult[]> {
-    const chunk = await this.jobsService.getChunkResults(jobId, +chunkIndex);
-    return chunk;
+    return this.jobsService.getChunk(sessionId, +chunkIndex);
   }
 
-  /**
-   * PATCH /api/jobs/:id/chunks/:chunkIndex
-   * Body: CleaningResult[]
-   */
-  @Patch(':id/chunks/:chunkIndex')
+  @Patch(':sessionId/chunks/:chunkIndex')
   async approveChunk(
-    @Param('id') jobId: string,
+    @Param('sessionId') sessionId: string,
     @Param('chunkIndex') chunkIndex: number,
     @Body() corrections: CleaningResult[]
   ) {
-    return this.jobsService.saveChunkCorrections(
-      jobId,
-      +chunkIndex,
-      corrections
-    );
+    return this.jobsService.approveChunk(sessionId, +chunkIndex, corrections);
   }
 
-  /**
-   * GET /api/jobs/:id/progress
-   * Returns { chunks: (CleaningResult[]|null)[], currentChunk: number, totalChunks: number }
-   */
-  @Get(':id/progress')
-  async getProgress(@Param('id') jobId: string): Promise<JobProgress> {
-    return this.queueService.getJobProgress(jobId);
+  @Get(':sessionId/results')
+  async getAllResults(
+    @Param('sessionId') sessionId: string
+  ): Promise<CleaningResult[]> {
+    return this.jobsService.getAllResults(sessionId);
   }
 
-  /** (unchanged) POST /api/jobs/flush */
+  @Delete(':sessionId')
+  async cleanupSession(@Param('sessionId') sessionId: string) {
+    await this.jobsService.cleanupSession(sessionId);
+    return { success: true };
+  }
+
   @Post('flush')
-  async flushQueue() {
-    return this.jobsService.flushAllJobs();
+  async flushSessions() {
+    return this.jobsService.flushAllSessions();
   }
 }
