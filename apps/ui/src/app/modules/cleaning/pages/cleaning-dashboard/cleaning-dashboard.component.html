@@ -1,25 +1,31 @@
 <div class="dashboard">
-  <!-- ——— Header Bar ——— -->
+  <!-- Header Bar -->
   <header class="dashboard__header">
     <div class="header__title">
-      <h1>Taxon Cleaner</h1>
+      <h1>Author Cleaner Tool</h1>
+      <span class="mode-badge">{{ cleanMode | titlecase }} Mode</span>
     </div>
     <button class="btn btn--danger" (click)="startNewSession()">
       New Session
     </button>
   </header>
 
-  <!-- ——— Initial / Reset View ——— -->
-  <!-- Show setup when no sessionId yet and not completed -->
+  <!-- Initial Setup View -->
   <section class="dashboard__setup" *ngIf="!sessionId && !allChunksCompleted">
     <aside class="setup__sidebar">
       <app-settings-panel
         [settings]="settings"
+        [mode]="cleanMode"
         (settingsChanged)="onSettings($event)"
       ></app-settings-panel>
     </aside>
     <main class="setup__main">
-      <h2>Load Your Data</h2>
+      <h2>Load Your Author Data</h2>
+      <p class="description">
+        Upload a CSV file with author names or paste CSV data to begin the
+        cleaning process. The tool will identify potential issues auto-correct
+        as many as possible and suggest corrections based on IPNI.
+      </p>
       <app-data-input
         [mode]="cleanMode"
         (dataLoaded)="startCleaning($event)"
@@ -27,23 +33,17 @@
     </main>
   </section>
 
-  <!-- ——— Chunk Review View ——— -->
-  <!-- Show review once sessionId exists and not yet allChunksCompleted -->
+  <!-- Chunk Review View -->
   <section class="dashboard__review" *ngIf="sessionId && !allChunksCompleted">
     <main class="review__main">
-      <!-- 1) If still initializing and no chunk ready yet: show spinner -->
-      <div
-        *ngIf="
-          isInitializing &&
-          (!sessionProgress || (sessionProgress.readyChunks?.length || 0) === 0)
-        "
-        class="overlay"
-      >
+      <!-- Initializing State -->
+      <div *ngIf="isInitializing" class="overlay">
         <mat-spinner diameter="48"></mat-spinner>
-        <p>Initializing session…</p>
+        <p>Processing your data...</p>
+        <small>This may take a few moments for large files</small>
       </div>
 
-      <!-- 2) When not initializing and a current chunk is loaded: show chunk processor -->
+      <!-- Chunk Processor -->
       <app-chunk-processor
         *ngIf="!isInitializing && currentRecords?.length"
         [jobId]="sessionId"
@@ -55,57 +55,58 @@
         (nextChunk)="onNextChunk()"
       ></app-chunk-processor>
 
-      <!-- 3) If not initializing, but no currentRecords and next chunk not yet ready: waiting message -->
+      <!-- Waiting for Next Chunk -->
       <div
         *ngIf="
-          !isInitializing &&
-          sessionProgress &&
-          currentRecords.length === 0 &&
-          !sessionProgress.readyChunks.includes(currentChunkIndex + 1)
+          !isInitializing && currentRecords.length === 0 && sessionProgress
         "
         class="waiting"
       >
-        <p>Waiting for next chunk to be ready…</p>
+        <mat-spinner diameter="36"></mat-spinner>
+        <p>Processing next chunk...</p>
+        <small>Chunk {{ currentChunkIndex + 1 }} of {{ totalChunks }}</small>
       </div>
     </main>
 
-    <!-- Footer with progress bar -->
-    <footer class="review__footer">
+    <!-- Progress Footer -->
+    <footer class="review__footer" *ngIf="sessionProgress">
       <div class="progress">
         <div class="progress__bar">
           <div
             class="progress__fill"
             [style.width.%]="
-              sessionProgress
-                ? ((sessionProgress.readyChunks.length || 0) / totalChunks) *
-                  100
-                : 0
+              (sessionProgress.readyChunks.length / totalChunks) * 100
             "
           ></div>
         </div>
         <div class="progress__info">
-          {{ sessionProgress?.readyChunks?.length || 0 }} /
-          {{ totalChunks }} chunks (Current: {{ currentChunkIndex + 1 }})
+          <span class="progress__text">
+            {{ sessionProgress.readyChunks.length }} / {{ totalChunks }} chunks
+            ready
+          </span>
+          <span class="progress__current">
+            Current: {{ currentChunkIndex + 1 }}
+          </span>
         </div>
       </div>
     </footer>
   </section>
 
-  <!-- ——— Completion Screen ——— -->
+  <!-- Completion Screen -->
   <section class="dashboard__done" *ngIf="allChunksCompleted">
     <div class="done__card">
-      <div class="done__icon">✔️</div>
+      <div class="done__icon">✅</div>
       <h2>All chunks processed!</h2>
-      <p>Preparing your results…</p>
+      <p>Preparing your results...</p>
       <mat-spinner diameter="36"></mat-spinner>
     </div>
   </section>
 
-  <!-- ——— Fullscreen Loading Overlay when loading a chunk ——— -->
+  <!-- Loading Overlay -->
   <div class="overlay" *ngIf="isLoadingChunk && currentRecords.length === 0">
     <div class="overlay__box">
       <mat-spinner diameter="48"></mat-spinner>
-      <p>Loading chunk data…</p>
+      <p>Loading chunk data...</p>
     </div>
   </div>
 </div>

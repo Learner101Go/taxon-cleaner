@@ -1,5 +1,5 @@
 <div class="chunk-processor">
-  <!-- Header with nav & stats -->
+  <!-- Header with navigation and stats -->
   <header class="processor__header">
     <button
       class="nav-btn"
@@ -7,142 +7,269 @@
       [disabled]="currentChunkIndex === 0"
       aria-label="Previous chunk"
     >
-      ‹
+      ‹ Previous
     </button>
+
     <div class="header__info">
       <h2>Chunk {{ currentChunkIndex + 1 }} / {{ totalChunks }}</h2>
       <div class="header__stats">
-        <span>{{ currentChunk.length }} records</span>
-        <span>{{ getTotalIssues() }} issues</span>
-        <span>{{ getTotalSuggestions() }} suggestions</span>
+        <span class="stat">📄 {{ currentChunk.length }} records</span>
+        <span class="stat issues">⚠️ {{ getTotalIssues() }} issues</span>
+        <span class="stat suggestions"
+          >💡 {{ getTotalSuggestions() }} suggestions</span
+        >
       </div>
     </div>
+
     <button
       class="nav-btn"
       (click)="nextChunk.emit()"
       [disabled]="currentChunkIndex === totalChunks - 1"
       aria-label="Next chunk"
     >
-      ›
+      Next ›
     </button>
   </header>
 
-  <!-- Loading -->
+  <!-- Loading State -->
   <div *ngIf="!currentChunk.length" class="processor__loading">
     <mat-spinner diameter="36"></mat-spinner>
-    <p>Loading chunk…</p>
+    <p>Loading chunk...</p>
   </div>
 
-  <!-- Records list -->
+  <!-- Records List -->
   <div *ngIf="currentChunk.length" class="records-list">
     <div
       class="record"
-      *ngFor="let rec of currentChunk; let i = index"
+      *ngFor="let rec of currentRecords; let i = index"
       [class.has-issues]="rec.issues.length"
+      [class.has-suggestions]="rec.suggestions.length"
+      [class.author-issues]="hasAuthorIssues(rec)"
     >
-      <section class="record__box record__box--orig">
-        <h3>Original</h3>
-        <p><strong>Name:</strong> {{ rec.original.scientificName }}</p>
-        <p *ngIf="rec.original.scientificNameAuthorship">
-          <strong>Authorship:</strong>
-          {{ rec.original.scientificNameAuthorship }}
-        </p>
-        <p>
-          <strong>Coords:</strong>
-          {{ rec.original.decimalLatitude }},
-          {{ rec.original.decimalLongitude }}
-        </p>
-        <p><strong>Family:</strong> {{ rec.original.family }}</p>
-      </section>
+      <!-- Record Header -->
+      <div class="record__header">
+        <span class="record__number">Record {{ i + 1 }}</span>
+        <div class="record__badges">
+          <span *ngIf="rec.issues.length" class="badge badge--issues">
+            {{ rec.issues.length }} issue(s)
+          </span>
+          <span
+            *ngIf="getAuthorSuggestions(rec).length"
+            class="badge badge--suggestions"
+          >
+            {{ getAuthorSuggestions(rec).length }} suggestion(s)
+          </span>
+        </div>
+      </div>
 
-      <section class="record__box record__box--clean">
-        <h3>Cleaned</h3>
-        <div class="field-row">
-          <label>Name</label>
-          <input
-            type="text"
-            [(ngModel)]="rec.accepted.scientificName"
-            (ngModelChange)="onRecordChange(i)"
-          />
-        </div>
-        <div class="field-row" *ngIf="rec.original.scientificNameAuthorship">
-          <label>Authorship</label>
-          <input
-            type="text"
-            [(ngModel)]="rec.accepted.scientificNameAuthorship"
-            (ngModelChange)="onRecordChange(i)"
-          />
-        </div>
-        <div class="field-row">
-          <div>
-            <label>Latitude</label>
-            <input
-              type="number"
-              step="any"
-              [(ngModel)]="rec.accepted.decimalLatitude"
-              (ngModelChange)="onRecordChange(i)"
-            />
+      <!-- Original vs Cleaned Comparison -->
+      <div class="record__comparison">
+        <!-- Original Data -->
+        <section class="record__box record__box--original">
+          <h3>Original Data</h3>
+          <div class="field-group">
+            <div class="field" *ngIf="rec.original.authorName">
+              <label>Author Name:</label>
+              <span class="value">{{ rec.original.authorName }}</span>
+            </div>
+            <div class="field" *ngIf="rec.original.authorForename">
+              <label>Forename:</label>
+              <span class="value">{{ rec.original.authorForename }}</span>
+            </div>
+            <div class="field" *ngIf="rec.original.authorSurname">
+              <label>Surname:</label>
+              <span class="value">{{ rec.original.authorSurname }}</span>
+            </div>
+            <div class="field" *ngIf="rec.original.standardForm">
+              <label>Standard Form:</label>
+              <span class="value">{{ rec.original.standardForm }}</span>
+            </div>
+            <div class="field" *ngIf="rec.original.scientificName">
+              <label>Scientific Name:</label>
+              <span class="value">{{ rec.original.scientificName }}</span>
+            </div>
           </div>
-          <div>
-            <label>Longitude</label>
-            <input
-              type="number"
-              step="any"
-              [(ngModel)]="rec.accepted.decimalLongitude"
-              (ngModelChange)="onRecordChange(i)"
-            />
-          </div>
-        </div>
-        <div class="field-row">
-          <label>Family</label>
-          <input
-            type="text"
-            [(ngModel)]="rec.accepted.family"
-            (ngModelChange)="onRecordChange(i)"
-          />
-        </div>
+        </section>
 
-        <details *ngIf="rec.suggestions.length" class="suggestions">
-          <summary>
-            {{ rec.suggestions.length }} suggestion
-            {{ rec.suggestions.length > 1 ? 's' : '' }}
-          </summary>
-          <ul>
-            <li
-              *ngFor="let s of rec.suggestions"
-              (click)="applySuggestion(i, s)"
-              class="suggestion"
+        <!-- Cleaned/Edited Data -->
+        <section class="record__box record__box--cleaned">
+          <h3>Cleaned Data</h3>
+          <div class="field-group">
+            <div class="field-row">
+              <label for="authorName_{{ i }}">Author Name</label>
+              <input
+                id="authorName_{{ i }}"
+                type="text"
+                [(ngModel)]="rec.cleaned"
+                (ngModelChange)="onRecordChange(i)"
+                class="input-field"
+                [class.has-changes]="
+                  rec.original.authorName !== rec.accepted.authorName
+                "
+              />
+            </div>
+
+            <div
+              class="field-row"
+              *ngIf="rec.original.authorForename || rec.accepted.authorForename"
             >
-              <span class="icon">{{ getIssueIcon(s.type) }}</span>
-              <span>{{ getSuggestionValue(s) }}</span>
-              <small>({{ s.confidence * 100 | number : '1.0-0' }}%)</small>
-            </li>
-          </ul>
-        </details>
+              <label for="authorForename_{{ i }}">Forename</label>
+              <input
+                id="authorForename_{{ i }}"
+                type="text"
+                [(ngModel)]="rec.accepted.authorForename"
+                (ngModelChange)="onRecordChange(i)"
+                class="input-field"
+                [class.has-changes]="
+                  rec.original.authorForename !== rec.accepted.authorForename
+                "
+              />
+            </div>
 
-        <button class="btn-reset" (click)="resetRecord(i)">Reset</button>
-      </section>
+            <div
+              class="field-row"
+              *ngIf="rec.original.authorSurname || rec.accepted.authorSurname"
+            >
+              <label for="authorSurname_{{ i }}">Surname</label>
+              <input
+                id="authorSurname_{{ i }}"
+                type="text"
+                [(ngModel)]="rec.accepted.authorSurname"
+                (ngModelChange)="onRecordChange(i)"
+                class="input-field"
+                [class.has-changes]="
+                  rec.original.authorSurname !== rec.accepted.authorSurname
+                "
+              />
+            </div>
+
+            <div
+              class="field-row"
+              *ngIf="rec.original.standardForm || rec.accepted.standardForm"
+            >
+              <label for="standardForm_{{ i }}">Standard Form</label>
+              <input
+                id="standardForm_{{ i }}"
+                type="text"
+                [(ngModel)]="rec.accepted.standardForm"
+                (ngModelChange)="onRecordChange(i)"
+                class="input-field"
+                [class.has-changes]="
+                  rec.original.standardForm !== rec.accepted.standardForm
+                "
+              />
+            </div>
+
+            <div
+              class="field-row"
+              *ngIf="rec.original.scientificName || rec.accepted.scientificName"
+            >
+              <label for="scientificName_{{ i }}">Scientific Name</label>
+              <input
+                id="scientificName_{{ i }}"
+                type="text"
+                [(ngModel)]="rec.accepted.scientificName"
+                (ngModelChange)="onRecordChange(i)"
+                class="input-field"
+                [class.has-changes]="
+                  rec.original.scientificName !== rec.accepted.scientificName
+                "
+              />
+            </div>
+          </div>
+
+          <div class="field-actions">
+            <button class="btn-reset" (click)="resetRecord(i)" type="button">
+              Reset to Original
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Issues Display -->
+      <div class="record__issues" *ngIf="rec.issues.length">
+        <h4>Issues Found</h4>
+        <ul class="issues-list">
+          <li
+            *ngFor="let issue of rec.issues"
+            class="issue"
+            [class.issue--error]="issue.type === 'error'"
+            [class.issue--warning]="issue.type === 'warning'"
+            [class.issue--info]="issue.type === 'info'"
+          >
+            <span class="issue__icon">{{ getIssueIcon(issue.type) }}</span>
+            <span class="issue__message">{{ issue.message }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Suggestions -->
+      <details *ngIf="rec.suggestions.length" class="record__suggestions">
+        <summary class="suggestions__header">
+          <span>{{ rec.suggestions.length }} suggestion(s) available</span>
+          <span class="suggestions__icon">▼</span>
+        </summary>
+        <ul class="suggestions__list">
+          <li
+            *ngFor="let suggestion of rec.suggestions"
+            class="suggestion"
+            [class.suggestion--author]="suggestion.type === 'author'"
+            (click)="applySuggestion(i, suggestion)"
+          >
+            <div class="suggestion__content">
+              <span class="suggestion__type">{{
+                getSuggestionType(suggestion)
+              }}</span>
+              <span class="suggestion__value">{{
+                getSuggestionValue(suggestion)
+              }}</span>
+              <span class="suggestion__confidence">
+                {{ suggestion.confidence * 100 | number : '1.0-0' }}% confidence
+              </span>
+            </div>
+            <button class="suggestion__apply" type="button">Apply</button>
+          </li>
+        </ul>
+      </details>
     </div>
   </div>
 
-  <!-- Footer actions -->
+  <!-- Footer Actions -->
   <footer class="processor__actions">
-    <button
-      class="btn"
-      (click)="previousChunk.emit()"
-      [disabled]="currentChunkIndex === 0"
-    >
-      ‹ Previous
-    </button>
-    <button class="btn btn--primary" (click)="confirmAndContinue()">
-      ✓ Confirm & Continue
-    </button>
-    <button
-      class="btn"
-      (click)="nextChunk.emit()"
-      [disabled]="currentChunkIndex === totalChunks - 1"
-    >
-      Next ›
-    </button>
+    <div class="actions__left">
+      <button
+        class="btn btn--secondary"
+        (click)="previousChunk.emit()"
+        [disabled]="currentChunkIndex === 0"
+        type="button"
+      >
+        ‹ Previous Chunk
+      </button>
+    </div>
+
+    <div class="actions__center">
+      <button class="btn btn--outline" (click)="resetChunk()" type="button">
+        Reset All
+      </button>
+      <button
+        class="btn btn--primary"
+        (click)="confirmAndContinue()"
+        [disabled]="hasValidationErrors()"
+        type="button"
+      >
+        ✓ Confirm & Continue
+      </button>
+    </div>
+
+    <div class="actions__right">
+      <button
+        class="btn btn--secondary"
+        (click)="nextChunk.emit()"
+        [disabled]="currentChunkIndex === totalChunks - 1"
+        type="button"
+      >
+        Next Chunk ›
+      </button>
+    </div>
   </footer>
 </div>

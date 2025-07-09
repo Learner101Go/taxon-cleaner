@@ -1,471 +1,306 @@
-// // apps/api/src/jobs/jobs.service.ts
-// import {
-//   BadRequestException,
-//   Inject,
-//   Injectable,
-//   NotFoundException,
-// } from '@nestjs/common';
-// import { Job, Queue } from 'bullmq';
-// import {
-//   CleaningResult,
-//   CreateJobResponseDto,
-//   DataSettings,
-//   JobData,
-//   JobProgress,
-//   TaxonRecord,
-// } from '../shared/types';
-// import { chunkArray } from '../shared/types';
-// import { QueueService } from '../queue/queue.service';
-
-// @Injectable()
-// export class JobsService {
-//   totalChunks: number;
-
-//   constructor(private readonly queueService: QueueService) {}
-
-//   async createJob(jobData: JobData): Promise<CreateJobResponseDto> {
-//     const chunkSize = jobData.chunkSize || 50;
-//     const chunks = chunkArray(jobData.records, chunkSize);
-//     const totalChunks = chunks.length;
-
-//     const job = await this.queueService.addJob({
-//       ...jobData,
-//       chunks,
-//       totalChunks,
-//       processedChunks: 0,
-//     });
-
-//     // Initialize progress structure with empty arrays
-//     await job.updateProgress({
-//       chunks: Array(totalChunks).fill([]),
-//       currentChunk: 0,
-//       totalChunks,
-//     } as JobProgress);
-
-//     return { jobId: job.id, totalChunks };
-//   }
-
-//   async safeGetJob(jobId: string): Promise<Job<JobData>> {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-//     if (job.failedReason) throw new BadRequestException(job.failedReason);
-//     return job;
-//   }
-
-//   async getChunkResults(
-//     jobId: string,
-//     chunkIndex: number
-//   ): Promise<CleaningResult[]> {
-//     const job = await this.safeGetJob(jobId);
-//     console.log('job in backend: ', job);
-//     const progress = (await job.progress) as JobProgress;
-//     console.log('progress: in backend: ', progress);
-//     if (!progress?.chunks?.[chunkIndex]) {
-//       throw new NotFoundException(`Chunk ${chunkIndex} not processed yet`);
-//     }
-
-//     return progress.chunks[chunkIndex];
-//   }
-
-//   async saveChunkCorrections(
-//     jobId: string,
-//     chunkIndex: number,
-//     corrections: CleaningResult[]
-//   ) {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-
-//     const progress = (await job.progress) as JobProgress;
-//     progress.chunks[chunkIndex] = corrections;
-//     progress.currentChunk = chunkIndex + 1;
-
-//     await job.updateProgress(progress);
-//     return { success: true };
-//   }
-// }
-
-// import {
-//   Injectable,
-//   NotFoundException,
-//   BadRequestException,
-// } from '@nestjs/common';
-// import { FlowProducer, Job } from 'bullmq';
-// import {
-//   CleaningResult,
-//   CreateJobResponseDto,
-//   JobData,
-//   JobProgress,
-// } from '../shared/types';
-// import { chunkArray } from '../shared/types';
-// import { QueueService } from '../queue/queue.service';
-
-// @Injectable()
-// export class JobsService {
-//   constructor(
-//     private readonly queueService: QueueService,
-//     private readonly flowProducer: FlowProducer
-//   ) {}
-
-//   /**
-//    * Split jobData.records into chunks, enqueue one job per chunk,
-//    * initialize progress, and return all job IDs.
-//    */
-//   async createJob(jobData: JobData): Promise<CreateJobResponseDto> {
-//     const chunks = chunkArray(jobData.records, jobData.chunkSize);
-//     const totalChunks = chunks.length;
-
-//     // Build a flow: one parent + N children, all on the 'cleaning' queue
-//     const flow = await this.flowProducer.add({
-//       name: 'parent-cleaning',
-//       queueName: 'cleaning',
-//       data: { ...jobData, isParent: true, totalChunks },
-//       children: chunks.map((chunk, idx) => ({
-//         name: `chunk-${idx}`,
-//         queueName: 'cleaning',
-//         data: {
-//           ...jobData,
-//           records: chunk,
-//           chunkIndex: idx,
-//           totalChunks,
-//         },
-//       })),
-//     });
-
-//     // flow.job is the parent Job instance
-//     const parentJobId = flow.job.id.toString();
-//     return { jobIds: [parentJobId], totalChunks };
-//   }
-
-//   private async getJobOrThrow(jobId: string): Promise<Job> {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-//     if (job.failedReason) throw new BadRequestException(job.failedReason);
-//     return job;
-//   }
-
-//   /** Read one chunk’s results from progress.chunks */
-//   async getChunkResults(
-//     jobId: string,
-//     chunkIndex: number
-//   ): Promise<CleaningResult[]> {
-//     const job = await this.getJobOrThrow(jobId);
-//     const prog = (await job.progress) as JobProgress;
-//     const arr = prog.chunks;
-//     if (!Array.isArray(arr) || arr[chunkIndex] == null) {
-//       throw new NotFoundException(`Chunk ${chunkIndex} not ready`);
-//     }
-//     return arr[chunkIndex];
-//   }
-
-//   /** Save the user’s approved corrections into the correct slot */
-//   async saveChunkCorrections(
-//     jobId: string,
-//     chunkIndex: number,
-//     corrections: CleaningResult[]
-//   ) {
-//     const job = await this.getJobOrThrow(jobId);
-//     const prog = (await job.progress) as JobProgress;
-//     prog.chunks[chunkIndex] = corrections;
-//     prog.currentChunk = chunkIndex + 1;
-//     await job.updateProgress(prog);
-//     return { success: true };
-//   }
-
-//   async safeGetJob(jobId: string): Promise<Job<JobData>> {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-//     if (job.failedReason) throw new BadRequestException(job.failedReason);
-//     return job;
-//   }
-
-//   /** Exposed so controller’s flushQueue can call it */
-//   async flushAllJobs() {
-//     await this.queueService.flush();
-//     return { status: 'flushed' };
-//   }
-// }
-
-//////////////////////////////////////////////////////
-
-// import {
-//   Injectable,
-//   NotFoundException,
-//   BadRequestException,
-// } from '@nestjs/common';
-// import { Job } from 'bullmq';
-// import {
-//   CleaningResult,
-//   CreateJobResponseDto,
-//   JobData,
-//   JobProgress,
-//   JobStatus,
-// } from '../shared/types';
-// import { chunkArray } from '../shared/types';
-// import { QueueService } from '../queue/queue.service';
-
-// @Injectable()
-// export class JobsService {
-//   constructor(private readonly queueService: QueueService) {}
-
-//   async createJob(jobData: JobData): Promise<CreateJobResponseDto> {
-//     const chunks = chunkArray(jobData.records, jobData.chunkSize);
-
-//     // Generate a unique job group ID
-//     const jobGroupId = `group_${Date.now()}_${Math.random()
-//       .toString(36)
-//       .substr(2, 9)}`;
-
-//     // Create individual jobs for each chunk (no parent-child relationship)
-//     const jobs = await Promise.all(
-//       chunks.map((chunk, index) =>
-//         this.queueService.addJob({
-//           ...jobData,
-//           records: chunk,
-//           chunkIndex: index,
-//           totalChunks: chunks.length,
-//           jobGroupId, // Use this to group related jobs
-//         })
-//       )
-//     );
-
-//     const jobIds = jobs.map((job) => job.id);
-
-//     return {
-//       jobIds,
-//       totalChunks: chunks.length,
-//     };
-//   }
-
-//   private async getJobOrThrow(jobId: string): Promise<Job> {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-//     if (job.failedReason) throw new BadRequestException(job.failedReason);
-//     return job;
-//   }
-
-//   /** Read one chunk's results from the first job ID (treating it as the main job) */
-//   async getChunkResults(
-//     jobId: string,
-//     chunkIndex: number
-//   ): Promise<CleaningResult[]> {
-//     // For this approach, we'll look for jobs with the same jobGroupId
-//     const job = await this.getJobOrThrow(jobId);
-//     const jobGroupId = job.data.jobGroupId;
-
-//     if (!jobGroupId) {
-//       throw new NotFoundException(`Job group not found for job ${jobId}`);
-//     }
-
-//     // Find the specific chunk job
-//     const chunkJob = await this.queueService.findJobByGroupAndChunk(
-//       jobGroupId,
-//       chunkIndex
-//     );
-
-//     if (!chunkJob || !chunkJob.returnvalue) {
-//       throw new NotFoundException(`Chunk ${chunkIndex} not ready`);
-//     }
-
-//     return chunkJob.returnvalue;
-//   }
-
-//   /** Save the user's approved corrections into the correct chunk job */
-//   async saveChunkCorrections(
-//     jobId: string,
-//     chunkIndex: number,
-//     corrections: CleaningResult[]
-//   ) {
-//     const job = await this.getJobOrThrow(jobId);
-//     const jobGroupId = job.data.jobGroupId;
-
-//     if (!jobGroupId) {
-//       throw new NotFoundException(`Job group not found for job ${jobId}`);
-//     }
-
-//     // Find the specific chunk job and update its progress
-//     const chunkJob = await this.queueService.findJobByGroupAndChunk(
-//       jobGroupId,
-//       chunkIndex
-//     );
-
-//     if (!chunkJob) {
-//       throw new NotFoundException(`Chunk job ${chunkIndex} not found`);
-//     }
-
-//     // Store corrections in job progress
-//     await chunkJob.updateProgress({ corrections, approved: true });
-
-//     return { success: true };
-//   }
-
-//   async safeGetJob(jobId: string): Promise<Job<JobData>> {
-//     const job = await this.queueService.getJob(jobId);
-//     if (!job) throw new NotFoundException(`Job ${jobId} not found`);
-//     if (job.failedReason) throw new BadRequestException(job.failedReason);
-//     return job;
-//   }
-
-//   /** Exposed so controller's flushQueue can call it */
-//   async flushAllJobs() {
-//     await this.queueService.flush();
-//     return { status: 'flushed' };
-//   }
-// }
-
-///////////////////////////////////////////////////////////////////
-
-// src/jobs/jobs.service.ts (Streamlined)
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   CleaningResult,
-  CreateSessionResponse,
+  CreateSessionResponseDto,
   SessionData,
-  JobData,
+  SessionProgress,
   TaxonRecord,
   DataSettings,
+  JobData,
 } from '../shared/types';
 import { chunkArray } from '../shared/types';
 import { QueueService } from '../queue/queue.service';
 
 @Injectable()
 export class JobsService {
-  private readonly sessions = new Map<string, SessionData>();
+  private sessions = new Map<string, SessionData>();
+  private readonly SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly MAX_CONCURRENT_CHUNKS = 3; // Process max 3 chunks ahead
 
-  constructor(private readonly queueService: QueueService) {}
+  constructor(private readonly queueService: QueueService) {
+    // Clean up old sessions periodically
+    setInterval(() => this.cleanupOldSessions(), 60 * 60 * 1000); // Every hour
+  }
 
   async createSession(
-    data: TaxonRecord[],
+    records: TaxonRecord[],
     settings: DataSettings
-  ): Promise<CreateSessionResponse> {
-    const sessionId = `session_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
-    const chunks = chunkArray(data, settings.chunkSize);
+  ): Promise<CreateSessionResponseDto> {
+    const sessionId = this.generateSessionId();
+    const chunks = chunkArray(records, settings.chunkSize);
 
-    // Store session metadata
     const sessionData: SessionData = {
       sessionId,
-      totalRecords: data.length,
+      records,
+      settings,
       totalChunks: chunks.length,
       chunkSize: settings.chunkSize,
-      processedChunks: 0,
-      settings,
+      processedChunks: new Map(),
+      correctedChunks: new Map(),
+      readyChunks: new Set(),
+      currentlyProcessing: new Set(),
       createdAt: new Date(),
+      lastAccessed: new Date(),
     };
 
     this.sessions.set(sessionId, sessionData);
 
-    // Create jobs for first batch (e.g., first 10 chunks)
-    const initialBatchSize = Math.min(10, chunks.length);
-    const initialJobs = chunks
-      .slice(0, initialBatchSize)
-      .map((chunk, index) => ({
-        sessionId,
-        chunkIndex: index,
-        totalChunks: chunks.length,
-        records: chunk,
-        settings,
-      }));
-
-    // Add initial batch to queue
-    await Promise.all(
-      initialJobs.map((jobData) => this.queueService.addJob(jobData))
-    );
-
-    // Store remaining chunks for later processing
-    if (chunks.length > initialBatchSize) {
-      sessionData['remainingChunks'] = chunks.slice(initialBatchSize);
-      this.sessions.set(sessionId, sessionData);
-    }
-
-    console.log(
-      `Session ${sessionId} created with ${chunks.length} total chunks, ${initialBatchSize} initially queued`
-    );
+    // Start processing first few chunks immediately
+    this.startInitialChunkProcessing(sessionId);
 
     return {
       sessionId,
       totalChunks: chunks.length,
-      totalRecords: data.length,
+      totalRecords: records.length,
     };
   }
 
-  async processNextBatch(
-    sessionId: string,
-    currentChunk: number
-  ): Promise<void> {
+  private async startInitialChunkProcessing(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
-    if (!session || !session['remainingChunks']) return;
+    if (!session) return;
 
-    const remainingChunks = session['remainingChunks'] as TaxonRecord[][];
-    const batchSize = 5; // Process 5 chunks ahead
-    const startIndex = currentChunk + 1;
-    const endIndex = Math.min(startIndex + batchSize, session.totalChunks);
+    const chunksToProcess = Math.min(
+      this.MAX_CONCURRENT_CHUNKS,
+      session.totalChunks
+    );
 
-    const jobsToCreate = [];
-    for (let i = startIndex; i < endIndex; i++) {
-      const chunkIndex = i;
-      const chunkData = remainingChunks[i - 10]; // Adjust index for remaining chunks
-
-      if (chunkData) {
-        jobsToCreate.push({
-          sessionId,
-          chunkIndex,
-          totalChunks: session.totalChunks,
-          records: chunkData,
-          settings: session.settings,
-        });
-      }
+    for (let i = 0; i < chunksToProcess; i++) {
+      this.processChunk(sessionId, i);
     }
-
-    // Add jobs to queue
-    await Promise.all(
-      jobsToCreate.map((jobData) => this.queueService.addJob(jobData))
-    );
-
-    console.log(
-      `Queued ${jobsToCreate.length} additional chunks for session ${sessionId}`
-    );
   }
 
-  async getSessionProgress(sessionId: string) {
-    return this.queueService.getSessionProgress(sessionId);
+  private async processChunk(
+    sessionId: string,
+    chunkIndex: number
+  ): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.currentlyProcessing.has(chunkIndex)) {
+      return;
+    }
+
+    session.currentlyProcessing.add(chunkIndex);
+    session.lastAccessed = new Date();
+
+    try {
+      const startIdx = chunkIndex * session.chunkSize;
+      const endIdx = Math.min(
+        startIdx + session.chunkSize,
+        session.records.length
+      );
+      const chunkRecords = session.records.slice(startIdx, endIdx);
+
+      const jobData: JobData = {
+        sessionId,
+        chunkIndex,
+        records: chunkRecords,
+        settings: session.settings,
+        totalChunks: session.totalChunks,
+      };
+
+      console.log(`Processing chunk ${chunkIndex} for session ${sessionId}`);
+
+      // Add to queue for processing
+      const job = await this.queueService.addJob(jobData);
+
+      // Wait for job completion and store results
+      const results = await this.waitForJobCompletion(job.id);
+
+      session.processedChunks.set(chunkIndex, results);
+      session.readyChunks.add(chunkIndex);
+      session.currentlyProcessing.delete(chunkIndex);
+
+      console.log(`Chunk ${chunkIndex} completed for session ${sessionId}`);
+
+      // Process next chunk if needed
+      this.processNextChunkIfNeeded(sessionId, chunkIndex);
+    } catch (error) {
+      console.error(`Error processing chunk ${chunkIndex}:`, error);
+      session.currentlyProcessing.delete(chunkIndex);
+    }
+  }
+
+  private async waitForJobCompletion(jobId: string): Promise<CleaningResult[]> {
+    return new Promise((resolve, reject) => {
+      const checkJob = async () => {
+        try {
+          const job = await this.queueService.getJob(jobId);
+          if (!job) {
+            reject(new Error('Job not found'));
+            return;
+          }
+
+          if (job.finishedOn && job.returnvalue) {
+            resolve(job.returnvalue);
+          } else if (job.failedReason) {
+            reject(new Error(job.failedReason));
+          } else {
+            // Job still processing, check again in 1 second
+            setTimeout(checkJob, 1000);
+          }
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      checkJob();
+    });
+  }
+
+  private processNextChunkIfNeeded(
+    sessionId: string,
+    completedChunkIndex: number
+  ): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    // Find the next chunk that should be processed
+    const maxProcessAhead = completedChunkIndex + this.MAX_CONCURRENT_CHUNKS;
+    const nextChunkToProcess =
+      session.readyChunks.size + session.currentlyProcessing.size;
+
+    if (
+      nextChunkToProcess < session.totalChunks &&
+      nextChunkToProcess <= maxProcessAhead
+    ) {
+      this.processChunk(sessionId, nextChunkToProcess);
+    }
+  }
+
+  async getSessionProgress(sessionId: string): Promise<SessionProgress> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    session.lastAccessed = new Date();
+
+    return {
+      sessionId,
+      totalChunks: session.totalChunks,
+      readyChunks: Array.from(session.readyChunks).sort((a, b) => a - b),
+      currentlyProcessing: Array.from(session.currentlyProcessing).sort(
+        (a, b) => a - b
+      ),
+      correctedChunks: Array.from(session.correctedChunks.keys()).sort(
+        (a, b) => a - b
+      ),
+      totalRecords: session.records.length,
+    };
   }
 
   async getChunk(
     sessionId: string,
     chunkIndex: number
   ): Promise<CleaningResult[]> {
-    return this.queueService.getChunk(sessionId, chunkIndex);
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    session.lastAccessed = new Date();
+
+    // Return corrected version if available, otherwise processed version
+    if (session.correctedChunks.has(chunkIndex)) {
+      return session.correctedChunks.get(chunkIndex)!;
+    }
+
+    if (session.processedChunks.has(chunkIndex)) {
+      return session.processedChunks.get(chunkIndex)!;
+    }
+
+    // If chunk is not ready but not currently processing, start processing
+    if (!session.currentlyProcessing.has(chunkIndex)) {
+      this.processChunk(sessionId, chunkIndex);
+    }
+
+    throw new BadRequestException(`Chunk ${chunkIndex} not ready yet`);
   }
 
-  async approveChunk(
+  async saveChunkCorrections(
     sessionId: string,
     chunkIndex: number,
     corrections: CleaningResult[]
-  ) {
-    await this.queueService.approveChunk(sessionId, chunkIndex, corrections);
+  ): Promise<{ success: boolean }> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
 
-    // Trigger processing of next batch if needed
-    await this.processNextBatch(sessionId, chunkIndex);
+    session.lastAccessed = new Date();
+    session.correctedChunks.set(chunkIndex, corrections);
+
+    console.log(
+      `Saved corrections for chunk ${chunkIndex} in session ${sessionId}`
+    );
+
+    // Process next chunk if needed
+    this.processNextChunkIfNeeded(sessionId, chunkIndex);
 
     return { success: true };
   }
 
   async getAllResults(sessionId: string): Promise<CleaningResult[]> {
-    const chunks = await this.queueService.getAllSessionChunks(sessionId);
-    return chunks
-      .sort((a, b) => a.chunkIndex - b.chunkIndex)
-      .flatMap((chunk) => chunk.corrections || chunk.results);
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    session.lastAccessed = new Date();
+
+    const allResults: CleaningResult[] = [];
+
+    for (let i = 0; i < session.totalChunks; i++) {
+      const corrected = session.correctedChunks.get(i);
+      const processed = session.processedChunks.get(i);
+
+      if (corrected) {
+        allResults.push(...corrected);
+      } else if (processed) {
+        allResults.push(...processed);
+      }
+    }
+
+    return allResults;
   }
 
-  async cleanupSession(sessionId: string) {
-    this.sessions.delete(sessionId);
-    await this.queueService.cleanupSession(sessionId);
-  }
-
-  async flushAllSessions() {
+  async flushAllSessions(): Promise<{ status: string; cleared: number }> {
+    const sessionCount = this.sessions.size;
     this.sessions.clear();
     await this.queueService.flush();
-    return { status: 'flushed' };
+
+    return {
+      status: 'flushed',
+      cleared: sessionCount,
+    };
+  }
+
+  private generateSessionId(): string {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private cleanupOldSessions(): void {
+    const now = new Date();
+    const sessionsToDelete: string[] = [];
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      const timeSinceLastAccess =
+        now.getTime() - session.lastAccessed.getTime();
+      if (timeSinceLastAccess > this.SESSION_TIMEOUT) {
+        sessionsToDelete.push(sessionId);
+      }
+    }
+
+    sessionsToDelete.forEach((sessionId) => {
+      this.sessions.delete(sessionId);
+      console.log(`Cleaned up old session: ${sessionId}`);
+    });
+
+    if (sessionsToDelete.length > 0) {
+      console.log(`Cleaned up ${sessionsToDelete.length} old sessions`);
+    }
   }
 }

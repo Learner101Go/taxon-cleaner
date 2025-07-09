@@ -48,6 +48,7 @@
     "redis": "^4.7.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
+    "string-similarity": "^4.0.4",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.24",
     "zone.js": "^0.15.0"
@@ -83,6 +84,7 @@
     "@types/ioredis": "^4.28.10",
     "@types/jest": "^29.5.12",
     "@types/node": "18.16.9",
+    "@types/string-similarity": "^4.0.2",
     "@typescript-eslint/utils": "^8.19.0",
     "angular-eslint": "^19.2.0",
     "autoprefixer": "^10.4.0",

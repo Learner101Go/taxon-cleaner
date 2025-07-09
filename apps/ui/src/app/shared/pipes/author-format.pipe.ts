@@ -4,8 +4,6 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class AuthorFormatPipe implements PipeTransform {
   transform(value: string): string {
     if (!value) return '';
-
-    // Convert "Barkworth, Mary Elizabeth" to "M.E. Barkworth"
     return value
       .split(',')
       .reverse()

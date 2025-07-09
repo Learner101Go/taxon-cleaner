@@ -16,7 +16,7 @@ import { AuthService } from './auth.service';
 
     // 2. JwtModule for signing tokens
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'hard!to-guess_secret', // configure via env
+      secret: process.env.JWT_SECRET || 'hard!to-guess_secret', // should configured via env
       signOptions: { expiresIn: '1h' },
     }),
   ],

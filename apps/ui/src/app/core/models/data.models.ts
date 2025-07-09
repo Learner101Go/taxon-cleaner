@@ -1,5 +1,6 @@
 export interface CleaningChunk {
   original: TaxonRecord;
+  cleaned?: TaxonRecord;
   results: CleaningResult[];
   totalChunks: number;
   currentChunk: number;
@@ -61,11 +62,11 @@ export interface TaxonIssue extends Issue {
   message: string;
 }
 
-// ----- Suggestion Types -----
 export interface AuthorSuggestion {
   type: 'author';
-  confidence: number; // 0.0–1.0
-  correctedAuthor: string; // e.g. "M.E. Barkworth"
+  confidence: number;
+  correctedAuthor: string;
+  source?: 'ipni' | 'pterido';
 }
 
 export interface CoordSuggestion {
@@ -88,6 +89,7 @@ export interface TaxonSuggestion {
 
 export interface CleaningResult {
   original: TaxonRecord;
+  cleaned?: TaxonRecord;
   issues: Issue[];
   suggestions: (AuthorSuggestion | CoordSuggestion | TaxonSuggestion)[];
   accepted: TaxonRecord;
@@ -98,28 +100,28 @@ export interface CleaningResult {
   };
 }
 
-export interface CreateJobResponseDto {
-  jobIds: string[];
+export interface CreateSessionResponseDto {
+  sessionId: string;
   totalChunks: number;
-  totalRecords?: number;
+  totalRecords: number;
 }
 
-// export interface JobProgress {
-//   status: string;
-//   jobId: string;
-//   chunks: (CleaningResult[] | null)[];
-//   currentChunk: number;
-//   totalChunks: number;
-//   processedRecords?: any;
-//   totalRecords?: number;
-// }
+export interface SessionProgress {
+  sessionId: string;
+  totalChunks: number;
+  readyChunks: number[];
+  currentlyProcessing: number[];
+  correctedChunks: number[];
+  totalRecords: number;
+}
 
-// Optional: For strong typing of data sources
 export interface DataSourceConfig {
   name: string;
   enabled: boolean;
   endpoint?: string;
 }
+
+export type CleanMode = 'taxon' | 'coordinate' | 'author';
 
 export interface DataLoadEvent {
   data: TaxonRecord[];
@@ -130,11 +132,6 @@ export interface TaxonLoadEvent {
   data: TaxonRecord[];
   source: 'file-upload' | 'text-input';
 }
-
-// export interface CreateJobResponse {
-//   jobIds: string[];
-//   totalChunks: number;
-// }
 
 export function isAuthorSuggestion(
   suggestion: any
@@ -152,22 +149,4 @@ export function isTaxonSuggestion(
   suggestion: any
 ): suggestion is TaxonSuggestion {
   return suggestion.type === 'taxon';
-}
-
-////////////////////////////////////////////////
-
-// apps/ui/src/app/core/models/data.models.ts (Updated interfaces)
-export interface SessionProgress {
-  sessionId: string;
-  totalChunks: number;
-  processedChunks: number;
-  readyChunks: number[];
-  currentChunk: number;
-  status: 'processing' | 'ready' | 'completed';
-}
-
-export interface CreateSessionResponse {
-  sessionId: string;
-  totalChunks: number;
-  totalRecords: number;
 }

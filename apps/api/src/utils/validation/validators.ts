@@ -1,4 +1,3 @@
-// src/utils/validation/validators.ts
 import {
   ValidationArguments,
   ValidatorConstraint,
@@ -27,7 +26,6 @@ export class IsValidCoordinatesConstraint
   }
 }
 
-// src/utils/validation/pipes.ts
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';

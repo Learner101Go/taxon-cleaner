@@ -1,31 +1,23 @@
 <div class="data-input-container">
   <aside class="upload-pane">
-    <h3>Upload JSON File</h3>
+    <h3>
+      {{
+        mode === 'taxon' ? 'Upload Taxon Json file' : 'Upload Author CSV file'
+      }}
+    </h3>
     <input type="file" (change)="handleFileUpload($event)" hidden #fileInput />
     <button (click)="fileInput.click()">
       {{ mode === 'taxon' ? 'Choose JSON…' : 'Choose CSV…' }}
     </button>
-    <!-- <button (click)="fileInput.click()">Choose File…</button> -->
     <p *ngIf="rawData && lastUploadName" class="file-name">
       Selected: {{ lastUploadName }}
+    </p>
+    <p *ngIf="duplicateAuthorCount">
+      Total Duplicate records removed: {{ duplicateAuthorCount }}
     </p>
   </aside>
 
   <section class="text-pane">
-    <!-- <h3>Or Paste JSON</h3>
-    <textarea
-      [(ngModel)]="rawData"
-      placeholder="Paste a JSON array here…"
-      aria-label="Paste JSON"
-    ></textarea>
-    <button
-      class="process-btn"
-      (click)="processTextInput()"
-      [disabled]="!rawData.trim()"
-    >
-      Process Data
-    </button> -->
-
     <h3>
       {{ mode === 'taxon' ? 'Or Paste Taxon JSON' : 'Or Paste Author CSV' }}
     </h3>
@@ -35,7 +27,7 @@
       [placeholder]="
         mode === 'taxon'
           ? 'Paste a JSON array (of TaxonRecord) here…'
-          : 'Paste CSV here (with header row: id,author_name,author_forename,author_surname,standard_form)…'
+          : 'Paste CSV here (with header row: id,author_name,author_forename,author_surname,standard_form, or just author full name.)…'
       "
       aria-label="Data input"
     ></textarea>

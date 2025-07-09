@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import {
   CleaningSettings,
+  CleanMode,
   DataSourceConfig,
 } from 'apps/ui/src/app/core/models/data.models';
 
@@ -12,12 +13,13 @@ import {
 })
 export class SettingsPanelComponent {
   @Input() settings!: CleaningSettings;
+  @Input() mode!: CleanMode;
   @Output() settingsChanged = new EventEmitter<CleaningSettings>();
 
   availableSources: DataSourceConfig[] = [
     {
       name: 'Symbiota2 Collections',
-      enabled: true,
+      enabled: false,
       endpoint: '/api/collections',
     },
     { name: 'GBIF Backbone Taxonomy', enabled: false },

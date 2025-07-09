@@ -1,5 +1,3 @@
-// src/app/auth/auth.service.ts
-
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { JwtService } from '@nestjs/jwt';

@@ -1,4 +1,3 @@
-// apps/api/src/config/config.service.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService as NestConfigService } from '@nestjs/config';
 import { AppConfig } from './configuration';

@@ -8,11 +8,10 @@ import { environment } from 'apps/ui/src/environments/environment';
 })
 export class AuthService {
   private authTokenKey = 'symbiota2_token';
-  // private isAuthenticated$ = new BehaviorSubject<boolean>(false);
   private isAuthenticated$ = new BehaviorSubject<boolean>(
     !!localStorage.getItem(this.authTokenKey)
   );
-  private base = environment.s2Url; // http://localhost:8080/api/v1
+  private base = environment.s2Url;
 
   constructor(private http: HttpClient) {
     this.isAuthenticated$.next(!!localStorage.getItem(this.authTokenKey));

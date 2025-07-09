@@ -12,13 +12,14 @@
           [(ngModel)]="settings.autoCorrectAuthors"
           (ngModelChange)="onUserChange()"
         />
-        Auto-correct Author Names
+        Auto-correct Author Names 😉
       </label>
       <label class="option">
         <input
           type="checkbox"
           [(ngModel)]="settings.validateCoordinates"
           (ngModelChange)="onUserChange()"
+          [disabled]="true"
         />
         Validate Coordinates
       </label>
@@ -27,6 +28,7 @@
           type="checkbox"
           [(ngModel)]="settings.resolveTaxonomy"
           (ngModelChange)="onUserChange()"
+          [disabled]="true"
         />
         Resolve Taxonomy
       </label>
@@ -35,11 +37,15 @@
     <!-- Data Sources -->
     <section class="section-card">
       <h3>Data Sources</h3>
-      <label class="option" *ngFor="let source of availableSources">
+      <label
+        class="option"
+        *ngFor="let source of availableSources; let i = index"
+      >
         <input
           type="checkbox"
           [(ngModel)]="source.enabled"
           (ngModelChange)="onUserChange()"
+          [disabled]="i !== 2"
         />
         {{ source.name }}
       </label>

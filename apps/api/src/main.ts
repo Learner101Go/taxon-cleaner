@@ -26,7 +26,7 @@ async function bootstrap() {
 
   app.use(
     json({
-      limit: '50mb', // or whatever max size you expect
+      limit: '50mb',
     })
   );
   app.use(

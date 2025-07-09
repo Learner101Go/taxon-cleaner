@@ -1,27 +1,3 @@
-// import { ConfigModule, ConfigService } from '@nestjs/config';
-// import { DataSource } from 'typeorm';
-
-// export const databaseProviders = [
-//   {
-//     provide: 'DATA_SOURCE',
-//     useFactory: async (configService: ConfigService) => {
-//       const dataSource = new DataSource({
-//         type: 'mariadb',
-//         host: configService.get<string>('DB_HOST'),
-//         port: configService.get<number>('DB_PORT'),
-//         database: configService.get<string>('DB_NAME'),
-//         username: configService.get<string>('DB_USERNAME'),
-//         password: configService.get<string>('DB_PASSWORD'),
-//         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-//         synchronize: false,
-//       });
-
-//       return dataSource.initialize();
-//     },
-//     inject: [ConfigService],
-//   },
-// ];
-
 import { DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { PteridoAuthor } from './entities/pterido-authors.entity';

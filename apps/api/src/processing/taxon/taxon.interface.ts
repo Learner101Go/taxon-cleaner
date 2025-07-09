@@ -1,4 +1,3 @@
-// src/processing/taxon/taxon.interface.ts
 export interface TaxonResolution {
   originalName: string;
   matchedName?: string;

@@ -1,4 +1,3 @@
-// src/processing/coordinate/coordinate.interface.ts
 export interface CoordinateIssue {
   type: 'invalid' | 'out_of_bounds' | 'precision';
   message: string;

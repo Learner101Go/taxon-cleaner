@@ -3,7 +3,6 @@ import {
   CleaningResult,
   TaxonRecord,
 } from 'apps/ui/src/app/core/models/data.models';
-import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service';
 
 @Component({
   selector: 'app-chunk-processor',
@@ -12,7 +11,7 @@ import { CleaningService } from 'apps/ui/src/app/core/services/cleaning.service'
   standalone: false,
 })
 export class ChunkProcessorComponent {
-  @Input() jobId!: string;
+  @Input() jobId!: string; // Now sessionId
   @Input() currentChunkIndex!: number;
   @Input() totalChunks!: number;
   @Input() currentChunk: CleaningResult[] = [];
@@ -21,22 +20,31 @@ export class ChunkProcessorComponent {
   @Output() previousChunk = new EventEmitter<void>();
   @Output() nextChunk = new EventEmitter<void>();
 
-  // Make a local copy to avoid modifying the input directly
+  // get currentRecords(): CleaningResult[] {
+  //   return this.currentChunk.map(
+  //     (record) =>
+  //       ({
+  //         ...record,
+  //         accepted: record.accepted || { ...record.original },
+  //       } as CleaningResult)
+  //   );
+  // }
+
   get currentRecords(): CleaningResult[] {
-    return this.currentChunk.map(
-      (record) =>
-        ({
-          ...record,
-          accepted: record.accepted || { ...record.original },
-        } as CleaningResult)
-    );
+    return this.currentChunk.map((record) => {
+      console.log('cleaned: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>', record.cleaned);
+      if (!record.accepted) {
+        record.accepted = {
+          ...record.original,
+          // Seed the input field from the cleaned authorName first:
+          authorName: record.cleaned || record.original.authorName,
+        } as any;
+      }
+      return record;
+    });
   }
 
-  constructor(private cleaningService: CleaningService) {}
-
   onRecordChange(index: number) {
-    // This method is called when user edits a field
-    // The two-way binding will automatically update the record
     console.log(`Record ${index} changed`);
   }
 
@@ -57,22 +65,24 @@ export class ChunkProcessorComponent {
   getIssueIcon(type: string): string {
     switch (type) {
       case 'error':
-        return 'error';
+        return '❌';
       case 'warning':
-        return 'warning';
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
       default:
-        return 'info';
+        return 'ℹ️';
     }
   }
 
   getSuggestionType(suggestion: any): string {
     switch (suggestion.type) {
-      case 'taxon':
-        return 'Taxon';
       case 'author':
         return 'Author';
       case 'coordinate':
         return 'Coordinate';
+      case 'taxon':
+        return 'Taxon';
       default:
         return 'Unknown';
     }
@@ -80,12 +90,14 @@ export class ChunkProcessorComponent {
 
   getSuggestionValue(suggestion: any): string {
     switch (suggestion.type) {
-      case 'taxon':
-        return suggestion.acceptedName || suggestion.scientificName;
       case 'author':
-        return suggestion.correctedAuthor;
+        return `${suggestion.correctedAuthor} (${
+          suggestion.source || 'unknown'
+        })`;
       case 'coordinate':
         return `${suggestion.suggestedLat}, ${suggestion.suggestedLng}`;
+      case 'taxon':
+        return suggestion.acceptedName || suggestion.scientificName;
       default:
         return 'N/A';
     }
@@ -99,23 +111,25 @@ export class ChunkProcessorComponent {
     }
 
     switch (suggestion.type) {
-      case 'taxon':
-        if (suggestion.acceptedName) {
-          record.accepted.scientificName = suggestion.acceptedName;
-        } else if (suggestion.scientificName) {
-          record.accepted.scientificName = suggestion.scientificName;
-        }
-        if (suggestion.family) record.accepted.family = suggestion.family;
-        if (suggestion.genus) record.accepted.genus = suggestion.genus;
-        break;
-
       case 'author':
-        record.accepted.scientificNameAuthorship = suggestion.correctedAuthor;
+        // For author tool, apply to the main author field
+        record.accepted.authorName = suggestion.correctedAuthor;
+        if (suggestion.source) {
+          record.accepted.source = suggestion.source;
+        }
         break;
 
       case 'coordinate':
         record.accepted.decimalLatitude = suggestion.suggestedLat;
         record.accepted.decimalLongitude = suggestion.suggestedLng;
+        break;
+
+      case 'taxon':
+        if (suggestion.acceptedName) {
+          record.accepted.scientificName = suggestion.acceptedName;
+        }
+        if (suggestion.family) record.accepted.family = suggestion.family;
+        if (suggestion.genus) record.accepted.genus = suggestion.genus;
         break;
     }
 
@@ -123,15 +137,14 @@ export class ChunkProcessorComponent {
   }
 
   confirmAndContinue() {
-    // emit the updated currentChunk
     this.completed.emit(this.currentChunk);
   }
+
   resetRecord(i: number) {
     this.currentChunk[i].accepted = { ...this.currentChunk[i].original };
   }
 
   resetChunk() {
-    // Reset all accepted values to original values
     this.currentRecords.forEach((record) => {
       record.accepted = { ...record.original };
     });
@@ -139,20 +152,43 @@ export class ChunkProcessorComponent {
   }
 
   hasValidationErrors(): boolean {
-    // Check for basic validation errors
     return this.currentRecords.some((record) => {
       const accepted = record.accepted as TaxonRecord;
 
-      if (!accepted.decimalLatitude || !accepted.decimalLongitude) return false;
-
-      return (
-        !accepted.scientificName ||
-        accepted.scientificName.trim().length === 0 ||
-        accepted.decimalLatitude < -90 ||
-        accepted.decimalLatitude > 90 ||
-        accepted.decimalLongitude < -180 ||
-        accepted.decimalLongitude > 180
-      );
+      // For author tool, main validation is having a non-empty author name
+      return !accepted.authorName || accepted.authorName.trim().length === 0;
     });
+  }
+
+  // Helper method to get author-specific display info
+  getAuthorDisplayValue(
+    record: CleaningResult,
+    field: 'original' | 'accepted'
+  ): string {
+    const data = field === 'original' ? record.original : record.accepted;
+
+    if (data.authorName) {
+      let display = data.authorName;
+      if (data.standardForm && data.standardForm !== data.authorName) {
+        display += ` → ${data.standardForm}`;
+      }
+      return display;
+    }
+
+    return 'N/A';
+  }
+
+  // Check if record has author-related issues
+  hasAuthorIssues(record: CleaningResult): boolean {
+    return record.issues.some(
+      (issue) =>
+        issue.field === 'authorName' ||
+        issue.message.toLowerCase().includes('author')
+    );
+  }
+
+  // Get author-specific suggestions
+  getAuthorSuggestions(record: CleaningResult) {
+    return record.suggestions.filter((s) => s.type === 'author');
   }
 }
